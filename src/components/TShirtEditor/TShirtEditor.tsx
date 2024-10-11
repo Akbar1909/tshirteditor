@@ -196,6 +196,7 @@ const TShirtEditor = () => {
             sizeX: 64,
             sizeY: 64,
           });
+          console.log("");
 
           text.setControlsVisibility({ deleteControl: true });
 
