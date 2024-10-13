@@ -50,6 +50,8 @@ const TextMethodToolbar = () => {
     },
   ];
 
+  console.log(selectedTextObject?.prevFill, selectedTextObject?.fill);
+
   return (
     <section>
       <div className="border-b py-3 flex items-center justify-between">
@@ -71,18 +73,65 @@ const TextMethodToolbar = () => {
 
       <div className="[&>div]:flex [&>div]:items-center [&>div]:py-3 [&>div]:border-b [&>div]:justify-between flex flex-col">
         <div>
-          <button onClick={() => onHandleTextChange("textAlign", "left")}>
+          <button
+            className={twMerge(
+              "p-2 rounded-md hover:bg-blue-200",
+              selectedTextObject.textAlign === "left" &&
+                "bg-blue-400 text-white",
+              "transition-all duration-150 ease-in-out"
+            )}
+            onClick={() => onHandleTextChange("textAlign", "left")}
+          >
             <FaAlignLeft fontSize={24} />
           </button>
-          <button onClick={() => onHandleTextChange("textAlign", "center")}>
+          <button
+            className={twMerge(
+              "p-2 rounded-md hover:bg-blue-200",
+              selectedTextObject.textAlign === "center" &&
+                "bg-blue-400 text-white",
+              "transition-all duration-150 ease-in-out"
+            )}
+            onClick={() => onHandleTextChange("textAlign", "center")}
+          >
             <FaAlignCenter fontSize={24} />
           </button>
-          <button onClick={() => onHandleTextChange("textAlign", "right")}>
+          <button
+            className={twMerge(
+              "p-2 rounded-md hover:bg-blue-200",
+              selectedTextObject.textAlign === "right" &&
+                "bg-blue-400 text-white",
+              "transition-all duration-150 ease-in-out"
+            )}
+            onClick={() => onHandleTextChange("textAlign", "right")}
+          >
             <FaAlignRight fontSize={24} />
           </button>
-          <button onClick={() => onHandleTextChange("textAlign", "justify")}>
+          <button
+            className={twMerge(
+              "p-2 rounded-md hover:bg-blue-200",
+              selectedTextObject.textAlign === "justify" &&
+                "bg-blue-400 text-white",
+              "transition-all duration-150 ease-in-out"
+            )}
+            onClick={() => onHandleTextChange("textAlign", "justify")}
+          >
             <FaAlignJustify fontSize={24} />
           </button>
+        </div>
+
+        <div>
+          <span>Transparent</span>
+          <input
+            name="transparent"
+            type="checkbox"
+            checked={selectedTextObject.fill === "transparent"}
+            onChange={(e) =>
+              onHandleTextChange(
+                "fill",
+                e.target.checked ? "transparent" : selectedTextObject.prevFill
+              )
+            }
+          />
         </div>
 
         <div>
@@ -96,28 +145,6 @@ const TextMethodToolbar = () => {
           >
             {selectedTextObject.fontFamily || "-"}
           </button>
-          {isOpen && (
-            <div ref={refs.setFloating} style={floatingStyles} className="z-40">
-              <div className="bg-white grid border z-50 rounded-lg shadow-sm px-2 py-2 w-80">
-                {fonts.map(({ label, url }, i) => (
-                  <div
-                    className={twMerge(
-                      "cursor-pointer rounded-lg hover:bg-gray-100 transition-all duration-150 h-20 flex items-center justify-center",
-                      selectedTextObject.fontFamily === label &&
-                        "bg-blue-300 text-white"
-                    )}
-                    key={i}
-                    role="button"
-                    onClick={() => {
-                      onHandleTextChange("fontFamily", { name: label, url });
-                    }}
-                  >
-                    {label}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <div>
           <span>Color</span>

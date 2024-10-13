@@ -401,14 +401,14 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
             fill: "#ffffff",
             fontWeight: 800,
             charSpacing: 20,
-            strokeWidth: 2,
+            strokeWidth: 1,
             objectCaching: false,
             stroke: "#ffffff",
             index: objects.length,
             id: uuidv4(),
             width: 300,
-            borderColor: "red",
             textAlign: "center",
+            height: 20,
           });
 
           setSelectTextObject(text);
@@ -493,14 +493,27 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     const index = objects.findIndex(
       (obj) => obj.get("id") === activeObject?.get("id")
     );
+
+    if (key === "fill") {
+      activeObject.set("prevFill", activeObject?.get("fill"));
+    }
+
     activeObject?.set(key, preparedValue);
+
     const copyOfObjects = [...objects];
     copyOfObjects[index] = activeObject;
 
     setObjects(copyOfObjects);
 
+    setSelectTextObject((prev) => {
+      return {
+        ...prev,
+        [key]: preparedValue,
+        ...(key === "fill" && { prevFill: activeObject?.get("prevFill") }),
+      };
+    });
+
     canvas.requestRenderAll();
-    setSelectTextObject((prev) => ({ ...prev, [key]: preparedValue }));
   };
 
   const onRemoveMethod = () => {
