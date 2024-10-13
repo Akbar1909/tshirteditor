@@ -27,11 +27,9 @@ export function renderIcon(icon: any) {
 
     ctx.save();
     ctx.translate(left, top);
-    debugger;
     ctx.rotate(util.degreesToRadians(fabricObject.angle));
     ctx.drawImage(icon, -size / 2, -size / 2, size, size);
     ctx.restore();
-    debugger;
   };
 }
 
@@ -41,11 +39,18 @@ export function deleteObject(_eventData, transform) {
   canvas.requestRenderAll();
 }
 
-export function cloneObject(_eventData, transform) {
+export function cloneObject(
+  _eventData,
+  transform,
+  events?: Record<PropertyKey, any>
+) {
   const canvas = transform.target.canvas;
   transform.target.clone().then((cloned) => {
     cloned.left += 10;
     cloned.top += 10;
+    Object.entries(events || {}).forEach(([key, func]) => {
+      cloned.on(key, (e) => func(e, cloned));
+    });
     cloned.controls.deleteControl = transform.target.controls.deleteControl;
     cloned.controls.cloneControl = transform.target.controls.cloneControl;
     canvas.add(cloned);

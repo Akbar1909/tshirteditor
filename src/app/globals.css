@@ -25,3 +25,7 @@ body {
     text-wrap: balance;
   }
 }
+
+.rangeslider{
+  margin: 10px 0 !important;
+}

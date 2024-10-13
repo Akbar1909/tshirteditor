@@ -22,7 +22,10 @@ const ActiveToolProperties = ({
 
   const wrap = (children: ReactNode) => (
     <div
-      className={twMerge("bg-white shadow-xl border-r py-3 px-3", className)}
+      className={twMerge(
+        "bg-white overflow-auto  shadow-xl border-r py-3 px-6",
+        className
+      )}
       {...computedProps}
     >
       {children}

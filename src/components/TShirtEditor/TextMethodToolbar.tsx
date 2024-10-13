@@ -116,6 +116,17 @@ const TextMethodToolbar = () => {
             onChange={(e) => onHandleTextChange("stroke", e.target.value)}
           />
         </div>
+        <div>
+          <span>Stroke width</span>
+          <div className="slider w-44">
+            <Slider
+              min={0}
+              max={100}
+              value={selectedTextObject.strokeWidth}
+              onChange={(value) => onHandleTextChange("strokeWidth", value)}
+            />
+          </div>
+        </div>
         <div className="flex items-center justify-between gap-10">
           <span>Size</span>
           <div className="slider w-44">

@@ -3,7 +3,7 @@ const TShirtEditor = dynamic(() => import("@/components/TShirtEditor"));
 
 const HomePage = () => {
   const urls = [
-    "https://crunkthread.com/wp-content/uploads/2022/05/Oversized-Lavender-Back.jpg",
+    "/images/Oversized-Lavender-Back-removebg-preview.png",
     "https://www.transparentpng.com/download/shirt/t0nf0S-t-shirt-transparent-background.png",
   ];
   return (

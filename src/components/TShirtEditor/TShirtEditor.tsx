@@ -113,16 +113,15 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     }
 
     (async () => {
-      if (firstRender.current) {
+      if (firstRender.current || canvas) {
         return;
       }
 
       const tempCanvas = new Canvas(CANVAS_ID, {
         renderOnAddRemove: true,
         preserveObjectStacking: true,
+        backgroundColor: "#f8edeb",
       });
-
-      tempCanvas.backgroundColor = "white";
 
       // Get the center of the canvas
       const canvasCenterX = tempCanvas.getWidth() / 2;
@@ -184,7 +183,10 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const setCustomControls = (obj: FabricObject) => {
+  const setCustomControls = (
+    obj: FabricObject,
+    events?: Record<PropertyKey, any>
+  ) => {
     if (!canvas) {
       return;
     }
@@ -207,11 +209,65 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       offsetY: -16,
       offsetX: -24,
       cursorStyle: "pointer",
-      mouseUpHandler: cloneObject,
+      mouseUpHandler: (eventData, transform) =>
+        cloneObject(eventData, transform, events),
       render: renderIcon(cloneImg()),
       sizeX: 24,
       sizeY: 24,
     });
+  };
+
+  const textHandleMousedown = (e) => {
+    const { target } = e;
+
+    setActiveProperty("closed");
+
+    activeMethod("add-text");
+
+    setSelectTextObject((prev) => ({
+      ...prev,
+      ...target,
+      text: target.text,
+      textAlign: target.textAlign,
+      textBackgroundColor: target.textBackgroundColor,
+      fill: target?.fill,
+      fontWeight: target.fontWeight,
+      fontSize: target.fontSize,
+      fontFamily: target.fontFamily,
+    }));
+  };
+
+  const handleTextMoving = (e, text) => {
+    if (!canvas || !verticalLineRef.current) {
+      return;
+    }
+
+    verticalLineRef.current?.set("visible", true);
+
+    const obj = text;
+    const canvasCenterX = (canvas?.getWidth() / 2) as number;
+
+    // Calculate the center position of the moving object
+    const objCenterX = obj ? obj.getCenterPoint().x : 0;
+
+    console.log({ objCenterX, canvasCenterX });
+
+    const isCenter = Math.abs(objCenterX - canvasCenterX) < 5;
+
+    verticalLineRef.current.set("visible", isCenter);
+
+    canvas?.renderAndReset();
+  };
+
+  const handleTextMouseUp = () => {
+    if (!verticalLineRef.current) {
+      return;
+    }
+    verticalLineRef.current?.set("visible", false);
+  };
+
+  const handleTextChanged = (obj: FabricObject) => {
+    setSelectTextObject((prev) => ({ ...prev, text: obj.get("text") }));
   };
 
   const onHandleMethod = ({ name }: { name: TShirtEditorMethodType }) => {
@@ -224,35 +280,27 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         {
           const text = new IText("Text", {
             fontSize: 60,
-            fill: "white",
+            fill: "#ffffff",
             fontWeight: 800,
             charSpacing: 20,
-            strokeWidth: 2,
+            strokeWidth: 0,
             objectCaching: false,
+            stroke: "#ffffff",
           });
 
           // text.setControlVisible("ml", false);
 
-          setCustomControls(text);
+          setCustomControls(text, {
+            mousedown: textHandleMousedown,
+            deselected: onRemoveMethod,
+            moving: handleTextMoving,
+            mouseup: handleTextMouseUp,
+            changed: handleTextChanged,
+          });
 
           canvas.setActiveObject(text);
 
-          text.on("mousedown", (e: any) => {
-            const { target } = e;
-
-            activeMethod("add-text");
-
-            setSelectTextObject((prev) => ({
-              ...prev,
-              text: target.text,
-              textAlign: target.textAlign,
-              textBackgroundColor: target.textBackgroundColor,
-              fill: target?.fill,
-              fontWeight: target.fontWeight,
-              fontSize: target.fontSize,
-              fontFamily: target.fontFamily,
-            }));
-          });
+          text.on("mousedown", textHandleMousedown);
 
           text.on("deselected", (e) => {
             onRemoveMethod();
@@ -268,29 +316,11 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
             console.log("drag leave");
           });
 
-          // text.on("changed", (e) => console.log(e));
+          text.on("changed", (e) => handleTextChanged(text));
 
-          text.on("moving", (e: any) => {
-            verticalLineRef.current?.set("visible", true);
+          text.on("moving", (e: any) => handleTextMoving(e, text));
 
-            const obj = text;
-            const canvasCenterX = (canvas?.getWidth() / 2) as number;
-
-            // Calculate the center position of the moving object
-            const objCenterX = obj ? obj.getCenterPoint().x : 0;
-
-            console.log({ objCenterX, canvasCenterX });
-
-            const isCenter = Math.abs(objCenterX - canvasCenterX) < 5;
-
-            verticalLineRef.current.set("visible", isCenter);
-
-            canvas?.renderAndReset();
-          });
-
-          text.on("mouseup", function (e) {
-            verticalLineRef.current?.set("visible", false);
-          });
+          text.on("mouseup", handleTextMouseUp);
 
           canvas.add(text);
           canvas.bringObjectToFront(text);
