@@ -3,9 +3,9 @@ import {
   TShirtAvailableShapeType,
   TShirtEditorMethodType,
 } from "./TshirtEditor.types";
-import { ITextProps, RectProps } from "fabric";
+import { FabricObject, ITextProps, RectProps } from "fabric";
 
-type TShirtEditorContextType = {
+export type TShirtEditorContextType = {
   onRemoveMethod: () => void;
   onHandleMethod: ({ name }: { name: TShirtEditorMethodType }) => void;
   onHandleTextChange: (key: keyof ITextProps, value: any) => Promise<void>;
@@ -17,11 +17,16 @@ type TShirtEditorContextType = {
   >;
   activeShapeName: TShirtAvailableShapeType | "idle";
   selectedRectObject: Partial<RectProps>;
-  activeProperty: "font-list" | "closed";
-  setActiveProperty: Dispatch<SetStateAction<"font-list" | "closed">>;
+  activeProperty: "font-list" | "closed" | "text-object-list";
+  setActiveProperty: Dispatch<
+    SetStateAction<"font-list" | "closed" | "text-object-list">
+  >;
   handleRectPropChanges: (key: keyof RectProps, value: any) => void;
   currentMethod: TShirtEditorMethodType;
   setCurrentMethod: Dispatch<SetStateAction<TShirtEditorMethodType>>;
+  setObjects: Dispatch<SetStateAction<FabricObject[]>>;
+  objects: FabricObject[];
+  setActiveObject: (obj: FabricObject) => void;
 };
 
 export const TShirtEditorContext =

@@ -12,7 +12,9 @@ import {
   FabricObject,
   ITextProps,
   Group,
+  Textbox,
 } from "fabric";
+import { v4 as uuidv4 } from "uuid";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   TShirtAvailableShapeType,
@@ -21,7 +23,7 @@ import {
 import MyCanvas from "./Canvas";
 import Aside from "./Aside";
 import ActiveToolProperties from "./ActiveToolProperties";
-import { TShirtEditorContext } from "./Context";
+import { TShirtEditorContext, TShirtEditorContextType } from "./Context";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   cloneImg,
@@ -75,17 +77,14 @@ interface TshirtEditorPorps {
 const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const firstRender = useRef(false);
   const [canvas, setCanvas] = useState<Canvas | null>(null);
+  const [objects, setObjects] = useState<FabricObject[]>([]);
   const verticalLineRef = useRef<Line>(null);
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [activeShapeName, setActiveShapeName] = useState<
     TShirtAvailableShapeType | "idle"
   >("idle");
-  const [activeProperty, setActiveProperty] = useState<"font-list" | "closed">(
-    "closed"
-  );
+  const [activeProperty, setActiveProperty] =
+    useState<TShirtEditorContextType["activeProperty"]>("closed");
   const [currentMethod, setCurrentMethod] =
     useState<TShirtEditorMethodType>("about-product");
   const [selectedRectObject, setSelectRectObject] = useState<
@@ -179,11 +178,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     };
   }, [size]);
 
-  const activeMethod = (method: TShirtEditorMethodType) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("method", method);
-    router.push(`${pathname}?${params.toString()}`);
-  };
+  const activeMethod = (method: TShirtEditorMethodType) =>
+    setCurrentMethod(method);
 
   const setCustomControls = (
     obj: FabricObject,
@@ -199,7 +195,15 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       offsetY: -16,
       offsetX: 16,
       cursorStyle: "pointer",
-      mouseUpHandler: deleteObject,
+      mouseUpHandler: (_eventData, transform) => {
+        console.log(transform.target.id);
+
+        setObjects((prev) =>
+          prev.filter((obj) => obj.id !== transform.target.id)
+        );
+
+        deleteObject(_eventData, transform);
+      },
       render: renderIcon(deleteImg()),
       sizeX: 24,
       sizeY: 24,
@@ -212,30 +216,23 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       offsetX: -24,
       cursorStyle: "pointer",
       mouseUpHandler: (eventData, transform) =>
-        cloneObject(eventData, transform, events),
+        cloneObject(eventData, transform, events, (clonedObject) => {
+          setObjects((prev) => [...prev, clonedObject]);
+        }),
       render: renderIcon(cloneImg()),
       sizeX: 24,
       sizeY: 24,
     });
   };
 
-  const textHandleMousedown = (e) => {
-    const { target } = e;
-
+  const textHandleMousedown = (e, obj: FabricObject) => {
     setActiveProperty("closed");
 
     activeMethod("add-text");
 
     setSelectTextObject((prev) => ({
       ...prev,
-      ...target,
-      text: target.text,
-      textAlign: target.textAlign,
-      textBackgroundColor: target.textBackgroundColor,
-      fill: target?.fill,
-      fontWeight: target.fontWeight,
-      fontSize: target.fontSize,
-      fontFamily: target.fontFamily,
+      ...obj,
     }));
   };
 
@@ -245,19 +242,12 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     }
 
     verticalLineRef.current?.set("visible", true);
-
     const obj = text;
     const canvasCenterX = (canvas?.getWidth() / 2) as number;
-
     // Calculate the center position of the moving object
     const objCenterX = obj ? obj.getCenterPoint().x : 0;
-
-    console.log({ objCenterX, canvasCenterX });
-
     const isCenter = Math.abs(objCenterX - canvasCenterX) < 5;
-
     verticalLineRef.current.set("visible", isCenter);
-
     canvas?.renderAndReset();
   };
 
@@ -268,8 +258,12 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     verticalLineRef.current?.set("visible", false);
   };
 
-  const handleTextChanged = (obj: FabricObject) => {
+  const handleTextChanged = (e, obj: FabricObject) => {
     setSelectTextObject((prev) => ({ ...prev, text: obj.get("text") }));
+  };
+
+  const handleTextDeselected = () => {
+    setActiveProperty("text-object-list");
   };
 
   const onHandleMethod = ({ name }: { name: TShirtEditorMethodType }) => {
@@ -282,45 +276,42 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     switch (name) {
       case "add-text":
         {
-          const text = new IText("Text", {
+          const text = new Textbox("Text", {
             fontSize: 60,
             fill: "#ffffff",
             fontWeight: 800,
             charSpacing: 20,
-            strokeWidth: 0,
+            strokeWidth: 2,
             objectCaching: false,
             stroke: "#ffffff",
+            index: objects.length,
+            id: uuidv4(),
+            width: 300,
+            borderColor: "red",
+            textAlign: "center",
           });
 
-          // text.setControlVisible("ml", false);
+          setSelectTextObject(text);
 
           setCustomControls(text, {
             mousedown: textHandleMousedown,
-            deselected: onRemoveMethod,
+            deselected: handleTextDeselected,
             moving: handleTextMoving,
             mouseup: handleTextMouseUp,
             changed: handleTextChanged,
           });
 
+          setObjects((prev) => [...prev, text]);
+
           canvas.setActiveObject(text);
 
-          text.on("mousedown", textHandleMousedown);
+          text.on("mousedown", (e) => textHandleMousedown(e, text));
 
-          text.on("deselected", (e) => {
-            onRemoveMethod();
-          });
+          text.on("deselected", handleTextDeselected);
 
           text.on("drop", () => {});
 
-          text.on("added", () => {
-            console.log("added");
-          });
-
-          text.on("dragleave", () => {
-            console.log("drag leave");
-          });
-
-          text.on("changed", (e) => handleTextChanged(text));
+          text.on("changed", (e) => handleTextChanged(e, text));
 
           text.on("moving", (e: any) => handleTextMoving(e, text));
 
@@ -332,6 +323,9 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
           canvas.renderAll();
         }
         break;
+      // case "image":
+      //   canvas.discardActiveObject();
+      //   break;
       default:
         break;
     }
@@ -376,7 +370,15 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
 
     const preparedValue = key === "fontFamily" ? value?.name : value;
 
+    const index = objects.findIndex(
+      (obj) => obj.get("id") === activeObject?.get("id")
+    );
     activeObject?.set(key, preparedValue);
+    const copyOfObjects = [...objects];
+    copyOfObjects[index] = activeObject;
+
+    setObjects(copyOfObjects);
+
     canvas.requestRenderAll();
     setSelectTextObject((prev) => ({ ...prev, [key]: preparedValue }));
   };
@@ -448,6 +450,15 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     setSelectRectObject((prev) => ({ ...prev, [key]: value }));
   };
 
+  const setActiveObject = (obj: FabricObject) => {
+    if (!canvas) {
+      return;
+    }
+
+    canvas.setActiveObject(obj);
+    canvas.renderAll();
+  };
+
   return (
     <TShirtEditorContext.Provider
       value={{
@@ -465,6 +476,9 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         setActiveProperty,
         currentMethod,
         setCurrentMethod,
+        objects,
+        setObjects,
+        setActiveObject,
       }}
     >
       <div className="relative flex h-full">

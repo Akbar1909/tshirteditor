@@ -1,7 +1,5 @@
-import { useSearchParams } from "next/navigation";
 import React, { ComponentPropsWithoutRef, ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
-import { TShirtEditorMethodType } from "./TshirtEditor.types";
 import TextMethodToolbar from "./TextMethodToolbar";
 import AboutProduct from "./AboutProduct";
 import ImageMethodToolbar from "./ImageMethodToolbar";
@@ -9,16 +7,18 @@ import ShapeMethodToolbar from "./ShapeMethodToolbar";
 import { useTShirtEditor } from "./Context";
 import RectShapeToolbar from "./RectShapeToolbar";
 import FontList from "./FontList";
+import TextObjectsList from "./TextObjectsList";
 
 interface ActiveToolPropertiesProps extends ComponentPropsWithoutRef<"div"> {}
 const ActiveToolProperties = ({
   className,
   ...computedProps
 }: ActiveToolPropertiesProps) => {
-  const { activeShapeName, activeProperty } = useTShirtEditor();
-  const searchParams = useSearchParams();
-  const method = (searchParams.get("method") ||
-    "about-product") as TShirtEditorMethodType;
+  const {
+    activeShapeName,
+    activeProperty,
+    currentMethod: method,
+  } = useTShirtEditor();
 
   const wrap = (children: ReactNode) => (
     <div
@@ -37,6 +37,8 @@ const ActiveToolProperties = ({
       switch (activeProperty) {
         case "font-list":
           return wrap(<FontList />);
+        case "text-object-list":
+          return wrap(<TextObjectsList />);
       }
       return wrap(<TextMethodToolbar />);
     case "image":

@@ -7,6 +7,10 @@ import Slider from "react-rangeslider";
 // To include the default styles
 import "react-rangeslider/lib/index.css";
 import { twMerge } from "tailwind-merge";
+import { FaAlignLeft } from "react-icons/fa";
+import { FaAlignRight } from "react-icons/fa";
+import { FaAlignCenter } from "react-icons/fa";
+import { FaAlignJustify } from "react-icons/fa";
 
 const TextMethodToolbar = () => {
   const [toggler, setToggler] = useState<"fill-color" | "closed">("closed");
@@ -66,6 +70,21 @@ const TextMethodToolbar = () => {
       </div>
 
       <div className="[&>div]:flex [&>div]:items-center [&>div]:py-3 [&>div]:border-b [&>div]:justify-between flex flex-col">
+        <div>
+          <button onClick={() => onHandleTextChange("textAlign", "left")}>
+            <FaAlignLeft fontSize={24} />
+          </button>
+          <button onClick={() => onHandleTextChange("textAlign", "center")}>
+            <FaAlignCenter fontSize={24} />
+          </button>
+          <button onClick={() => onHandleTextChange("textAlign", "right")}>
+            <FaAlignRight fontSize={24} />
+          </button>
+          <button onClick={() => onHandleTextChange("textAlign", "justify")}>
+            <FaAlignJustify fontSize={24} />
+          </button>
+        </div>
+
         <div>
           <span>Font Family</span>
           <button

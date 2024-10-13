@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { util } from "fabric";
+import { FabricObject, util } from "fabric";
+import { v4 as uuidv4 } from "uuid";
 export const loadFont = (fontName: string, fontUrl: string) => {
   return new Promise((resolve, reject) => {
     const font = new FontFace(fontName, `url(${fontUrl})`);
@@ -42,18 +43,23 @@ export function deleteObject(_eventData, transform) {
 export function cloneObject(
   _eventData,
   transform,
-  events?: Record<PropertyKey, any>
+  events?: Record<PropertyKey, any>,
+  cb: (obj: FabricObject) => void
 ) {
   const canvas = transform.target.canvas;
   transform.target.clone().then((cloned) => {
     cloned.left += 10;
     cloned.top += 10;
+    cloned.set("id", uuidv4());
     Object.entries(events || {}).forEach(([key, func]) => {
       cloned.on(key, (e) => func(e, cloned));
     });
     cloned.controls.deleteControl = transform.target.controls.deleteControl;
     cloned.controls.cloneControl = transform.target.controls.cloneControl;
     canvas.add(cloned);
+    if (cb) {
+      cb(cloned);
+    }
   });
 }
 
