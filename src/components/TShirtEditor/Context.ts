@@ -20,6 +20,8 @@ type TShirtEditorContextType = {
   activeProperty: "font-list" | "closed";
   setActiveProperty: Dispatch<SetStateAction<"font-list" | "closed">>;
   handleRectPropChanges: (key: keyof RectProps, value: any) => void;
+  currentMethod: TShirtEditorMethodType;
+  setCurrentMethod: Dispatch<SetStateAction<TShirtEditorMethodType>>;
 };
 
 export const TShirtEditorContext =

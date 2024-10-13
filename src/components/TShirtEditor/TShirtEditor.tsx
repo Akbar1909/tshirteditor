@@ -86,6 +86,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const [activeProperty, setActiveProperty] = useState<"font-list" | "closed">(
     "closed"
   );
+  const [currentMethod, setCurrentMethod] =
+    useState<TShirtEditorMethodType>("about-product");
   const [selectedRectObject, setSelectRectObject] = useState<
     Partial<RectProps>
   >({});
@@ -275,6 +277,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       return;
     }
 
+    setCurrentMethod(name);
+
     switch (name) {
       case "add-text":
         {
@@ -378,10 +382,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   };
 
   const onRemoveMethod = () => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("method");
-
-    router.push(`${pathname}?${params.toString()}`);
+    setCurrentMethod("about-product");
   };
 
   const onAddShape = (name: TShirtAvailableShapeType) => {
@@ -462,6 +463,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         handleRectPropChanges,
         activeProperty,
         setActiveProperty,
+        currentMethod,
+        setCurrentMethod,
       }}
     >
       <div className="relative flex h-full">

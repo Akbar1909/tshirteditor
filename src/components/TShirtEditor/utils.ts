@@ -66,6 +66,7 @@ export const cloneIcon =
 export const deleteImg = () => {
   const image = document.createElement("img");
   image.src = deleteIcon;
+  image.classList.add("custom-control");
   return image;
 };
 
