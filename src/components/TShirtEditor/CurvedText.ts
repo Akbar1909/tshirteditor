@@ -1,4 +1,4 @@
-import { FabricObject, cac } from "fabric";
+import { FabricObject } from "fabric";
 
 class CurvedText extends FabricObject {
   static type = "curved-text";

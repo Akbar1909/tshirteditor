@@ -15,7 +15,6 @@ import {
 } from "fabric";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  SelectedTextObjectType,
   TShirtAvailableShapeType,
   TShirtEditorMethodType,
 } from "./TshirtEditor.types";

@@ -1,6 +1,5 @@
 import { createContext, Dispatch, SetStateAction, useContext } from "react";
 import {
-  SelectedTextObjectType,
   TShirtAvailableShapeType,
   TShirtEditorMethodType,
 } from "./TshirtEditor.types";
