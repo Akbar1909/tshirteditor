@@ -4,12 +4,8 @@ import { useTShirtEditor } from "./Context";
 import Slider from "react-rangeslider";
 
 const RectShapeToolbar = () => {
-  const {
-    onRemoveMethod,
-    setActiveShapeName,
-    selectedRectObject,
-    handleRectPropChanges,
-  } = useTShirtEditor();
+  const { setActiveShapeName, selectedRectObject, handleRectPropChanges } =
+    useTShirtEditor();
   return (
     <section>
       <div className="border-b py-3 flex items-center justify-between">
@@ -23,6 +19,7 @@ const RectShapeToolbar = () => {
           <span>Bg Color</span>
           <input
             type="color"
+            // @ts-expect-error TODO
             value={selectedRectObject.fill}
             onChange={(e) => handleRectPropChanges("fill", e.target.value)}
           />
@@ -33,6 +30,7 @@ const RectShapeToolbar = () => {
             <Slider
               min={0}
               max={100}
+              // @ts-expect-error TODO
               value={selectedRectObject.rx}
               onChange={(value) => {
                 handleRectPropChanges("rx", value);

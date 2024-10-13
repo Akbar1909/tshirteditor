@@ -1,5 +1,5 @@
-import TShirtEditor from "@/components/TShirtEditor";
-import React from "react";
+import dynamic from "next/dynamic";
+const TShirtEditor = dynamic(() => import("@/components/TShirtEditor"));
 
 const HomePage = () => {
   const urls = [

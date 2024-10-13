@@ -6,19 +6,19 @@ import {
 import { ITextProps, RectProps } from "fabric";
 
 type TShirtEditorContextType = {
-  onRemoveMethod: (method: TShirtEditorMethodType) => void;
+  onRemoveMethod: () => void;
   onHandleMethod: ({ name }: { name: TShirtEditorMethodType }) => void;
   onHandleTextChange: (key: keyof ITextProps, value: any) => Promise<void>;
   selectedTextObject: ITextProps;
   onAddShape: (name: TShirtAvailableShapeType) => void;
   addImage: (file: File) => void;
-  setActiveShapeName: SetStateAction<
-    Dispatch<TShirtAvailableShapeType | "idle">
+  setActiveShapeName: Dispatch<
+    SetStateAction<TShirtAvailableShapeType | "idle">
   >;
   activeShapeName: TShirtAvailableShapeType | "idle";
   selectedRectObject: Partial<RectProps>;
   activeProperty: "font-list" | "closed";
-  setActiveProperty: SetStateAction<Dispatch<"font-list" | "closed">>;
+  setActiveProperty: Dispatch<SetStateAction<"font-list" | "closed">>;
   handleRectPropChanges: (key: keyof RectProps, value: any) => void;
 };
 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ChangeEvent } from "react";
 import { IoMdClose } from "react-icons/io";
 import { useTShirtEditor } from "./Context";
 
@@ -15,7 +15,7 @@ const ImageMethodToolbar = () => {
       <div className="mt-8">
         <input
           type="file"
-          onChange={(e) => {
+          onChange={(e: any) => {
             if (e.target.files?.length > 0) {
               addImage(e.target.files[0]);
             }

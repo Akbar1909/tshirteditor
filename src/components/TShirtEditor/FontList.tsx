@@ -28,7 +28,7 @@ const FontList = () => {
   );
 
   // Function to dynamically load fonts
-  const loadFont = (label, url) => {
+  const loadFont = (label: any, url: any) => {
     const style = document.createElement("style");
     style.innerHTML = `
           @font-face {
