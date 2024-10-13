@@ -11,8 +11,13 @@ import { twMerge } from "tailwind-merge";
 const TextMethodToolbar = () => {
   const [toggler, setToggler] = useState<"fill-color" | "closed">("closed");
   const [isOpen, setIsOpen] = useState(false);
-  const { onRemoveMethod, selectedTextObject, onHandleTextChange, ...rest } =
-    useTShirtEditor();
+  const {
+    onRemoveMethod,
+    selectedTextObject,
+    onHandleTextChange,
+    setActiveProperty,
+    ...rest
+  } = useTShirtEditor();
 
   const { refs, floatingStyles } = useFloating({
     onOpenChange: setIsOpen,
@@ -63,9 +68,15 @@ const TextMethodToolbar = () => {
       <div className="[&>div]:flex [&>div]:items-center [&>div]:py-3 [&>div]:border-b [&>div]:justify-between flex flex-col">
         <div>
           <span>Font Family</span>
-          <div ref={refs.setReference} onClick={() => setIsOpen(!isOpen)}>
+          <button
+            className="cursor-pointer"
+            ref={refs.setReference}
+            onClick={() => {
+              setActiveProperty("font-list");
+            }}
+          >
             {selectedTextObject.fontFamily || "-"}
-          </div>
+          </button>
           {isOpen && (
             <div ref={refs.setFloating} style={floatingStyles} className="z-40">
               <div className="bg-white grid border z-50 rounded-lg shadow-sm px-2 py-2 w-80">
@@ -113,6 +124,18 @@ const TextMethodToolbar = () => {
               max={100}
               value={selectedTextObject.fontSize}
               onChange={(value) => onHandleTextChange("fontSize", value)}
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-10">
+          <span>Opacity</span>
+          <div className="slider w-44">
+            <Slider
+              min={0}
+              max={1}
+              step={0.001}
+              value={selectedTextObject.opacity}
+              onChange={(value) => onHandleTextChange("opacity", value)}
             />
           </div>
         </div>

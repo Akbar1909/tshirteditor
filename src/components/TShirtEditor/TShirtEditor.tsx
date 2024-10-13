@@ -6,13 +6,17 @@ import {
   Rect,
   InteractiveFabricObject,
   Line,
-  ControlActionHandler,
   Control,
+  Circle,
+  RectProps,
   FabricObject,
+  ITextProps,
+  Group,
 } from "fabric";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   SelectedTextObjectType,
+  TShirtAvailableShapeType,
   TShirtEditorMethodType,
 } from "./TshirtEditor.types";
 import MyCanvas from "./Canvas";
@@ -20,8 +24,17 @@ import Aside from "./Aside";
 import ActiveToolProperties from "./ActiveToolProperties";
 import { TShirtEditorContext } from "./Context";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { deleteImg, deleteObject, loadFont, renderIcon } from "./utils";
-import useControls from "./useControls";
+import {
+  cloneImg,
+  cloneObject,
+  deleteIcon,
+  deleteImg,
+  deleteObject,
+  loadFont,
+  renderIcon,
+} from "./utils";
+import useEditableBox from "./useEditableBox";
+import useEditableBoxv2 from "./useEditableBoxv2";
 
 const CANVAS_ID = "t-shirt_editor";
 
@@ -38,61 +51,51 @@ Canvas.prototype.getItemsByName = function (name: string) {
   return objectList;
 };
 
-// FabricObject.prototype.controls.deleteControl = new Control({
-//   x: 0.5,
-//   y: -0.5,
-//   offsetY: -16,
-//   offsetX: 16,
-//   cursorStyle: "pointer",
-//   mouseUpHandler: deleteObject,
-//   render: renderIcon(deleteImg()),
-//   sizeX: 64,
-//   sizeY: 64,
-// });
-
 InteractiveFabricObject.ownDefaults = {
   ...InteractiveFabricObject.ownDefaults,
   // cornerStyle: "circle",
-  cornerSize: 4,
-  padding: 4,
+  cornerSize: 8,
   // top: 1,
+
   transparentCorners: false,
-  strokeWidth: 4,
-  // borderScaleFactor: 0,
-  // borderColor: "gray",
-  borderOpacityWhenMoving: 0.5,
+  strokeWidth: 6,
+  borderScaleFactor: 0,
+  borderColor: "gray",
+  borderOpacityWhenMoving: 1,
   centeredRotation: true,
-  lockScalingFlip: true,
   lockSkewingX: true,
   lockSkewingY: true,
+  centeredScaling: true,
+  padding: 0,
 };
 
-const TShirtEditor = () => {
+interface TshirtEditorPorps {
+  imageUrls: string[];
+}
+
+const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const firstRender = useRef(false);
-  const canvasRef = useRef<Canvas>(null);
+  const [canvas, setCanvas] = useState<Canvas | null>(null);
   const verticalLineRef = useRef<Line>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const [selectedTextObject, setSelectTextObject] =
-    useState<SelectedTextObjectType>({
-      text: "",
-      textAlign: "",
-      textBackgroundColor: "",
-      fill: "",
-      fontWeight: 0,
-      fontSize: 0,
-      linethrough: false,
-      underline: false,
-      overline: false,
-      stroke: "",
-      charSpacing: 0,
-      fontFamily: "",
-    });
+  const [activeShapeName, setActiveShapeName] = useState<
+    TShirtAvailableShapeType | "idle"
+  >("idle");
+  const [activeProperty, setActiveProperty] = useState<"font-list" | "closed">(
+    "closed"
+  );
+  const [selectedRectObject, setSelectRectObject] = useState<
+    Partial<RectProps>
+  >({});
+  const [selectedTextObject, setSelectTextObject] = useState<
+    Partial<ITextProps>
+  >({});
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  // useControls(canvasRef);
+  const { addEditableBox } = useEditableBoxv2(canvas);
 
   useLayoutEffect(() => {
     if (!canvasContainerRef.current) {
@@ -115,16 +118,16 @@ const TShirtEditor = () => {
         return;
       }
 
-      canvasRef.current = new Canvas(CANVAS_ID, {
+      const tempCanvas = new Canvas(CANVAS_ID, {
         renderOnAddRemove: true,
         preserveObjectStacking: true,
       });
 
-      canvasRef.current.backgroundColor = "white";
+      tempCanvas.backgroundColor = "white";
 
       // Get the center of the canvas
-      const canvasCenterX = canvasRef.current.getWidth() / 2;
-      const canvasHeight = canvasRef.current.getHeight();
+      const canvasCenterX = tempCanvas.getWidth() / 2;
+      const canvasHeight = tempCanvas.getHeight();
 
       // Create a vertical center line
       verticalLineRef.current = new Line(
@@ -139,29 +142,40 @@ const TShirtEditor = () => {
       );
 
       const image = await FabricImage.fromURL(
-        "https://www.transparentpng.com/download/shirt/t0nf0S-t-shirt-transparent-background.png",
+        imageUrls[0],
         {},
         {
           selectable: false,
-
           centeredScaling: true,
         }
       );
 
-      image.scaleToHeight(size.width / 1.05);
-      image.scaleToWidth(size.height / 1.05);
+      image.scaleToHeight(size.width);
+      image.scaleToWidth(size.height);
+
+      // const designArea = new Rect({
+      //   width: 350, // Width of the design area
+      //   height: 600, // Height of the design area
+      //   fill: "rgba(0, 0, 0, 0.1)", // Semi-transparent green
+      //   stroke: "gray", // Outline color
+      //   strokeDashArray: [2, 5], // Dotted/dashed border
+      //   selectable: false, // Disable selection for the design area rectangle
+      // });
 
       firstRender.current = true;
 
-      canvasRef.current.add(image);
-      canvasRef.current.add(verticalLineRef.current);
-      canvasRef.current.bringObjectToFront(verticalLineRef.current);
-      canvasRef.current.centerObject(image);
-      canvasRef.current.renderAll();
+      tempCanvas.add(image);
+      tempCanvas.add(verticalLineRef.current);
+      tempCanvas.bringObjectToFront(verticalLineRef.current);
+      tempCanvas.centerObject(image);
+      tempCanvas.renderAll();
+      setCanvas(tempCanvas);
     })();
 
     return () => {
-      canvasRef.current?.dispose();
+      if (canvas) {
+        canvas.dispose();
+      }
     };
   }, [size]);
 
@@ -171,36 +185,58 @@ const TShirtEditor = () => {
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const setCustomControls = (obj: FabricObject) => {
+    if (!canvas) {
+      return;
+    }
+
+    obj.controls.deleteControl = new Control({
+      x: 0.5,
+      y: -0.5,
+      offsetY: -16,
+      offsetX: 16,
+      cursorStyle: "pointer",
+      mouseUpHandler: deleteObject,
+      render: renderIcon(deleteImg()),
+      sizeX: 24,
+      sizeY: 24,
+    });
+
+    obj.controls.cloneControl = new Control({
+      x: -0.5,
+      y: -0.5,
+      offsetY: -16,
+      offsetX: -24,
+      cursorStyle: "pointer",
+      mouseUpHandler: cloneObject,
+      render: renderIcon(cloneImg()),
+      sizeX: 24,
+      sizeY: 24,
+    });
+  };
+
   const onHandleMethod = ({ name }: { name: TShirtEditorMethodType }) => {
+    if (!canvas) {
+      return;
+    }
+
     switch (name) {
       case "add-text":
         {
-          const text = new IText("", {
-            fontSize: 36,
+          const text = new IText("Text", {
+            fontSize: 60,
             fill: "white",
-            hasControls: true,
-            fontWeight: 600,
+            fontWeight: 800,
             charSpacing: 20,
-            strokeWidth: 1.8,
+            strokeWidth: 2,
             objectCaching: false,
           });
 
-          text.controls.deleteControl = new Control({
-            x: 0.5,
-            y: -0.5,
-            offsetY: -16,
-            offsetX: 16,
-            cursorStyle: "pointer",
-            mouseUpHandler: deleteObject,
-            render: renderIcon(deleteImg()),
-            sizeX: 64,
-            sizeY: 64,
-          });
-          console.log("");
+          // text.setControlVisible("ml", false);
 
-          text.setControlsVisibility({ deleteControl: true });
+          setCustomControls(text);
 
-          canvasRef.current?.setActiveObject(text);
+          canvas.setActiveObject(text);
 
           text.on("mousedown", (e: any) => {
             const { target } = e;
@@ -233,11 +269,13 @@ const TShirtEditor = () => {
             console.log("drag leave");
           });
 
+          // text.on("changed", (e) => console.log(e));
+
           text.on("moving", (e: any) => {
             verticalLineRef.current?.set("visible", true);
 
             const obj = text;
-            const canvasCenterX = (canvasRef.current?.getWidth() / 2) as number;
+            const canvasCenterX = (canvas?.getWidth() / 2) as number;
 
             // Calculate the center position of the moving object
             const objCenterX = obj ? obj.getCenterPoint().x : 0;
@@ -248,35 +286,18 @@ const TShirtEditor = () => {
 
             verticalLineRef.current.set("visible", isCenter);
 
-            canvasRef.current?.renderAndReset();
+            canvas?.renderAndReset();
           });
 
           text.on("mouseup", function (e) {
             verticalLineRef.current?.set("visible", false);
           });
 
-          canvasRef.current?.add(text);
-          canvasRef.current?.bringObjectToFront(text);
-          canvasRef.current?.centerObject(text);
-          canvasRef.current?.renderAll();
+          canvas.add(text);
+          canvas.bringObjectToFront(text);
+          canvas.centerObject(text);
+          canvas.renderAll();
         }
-        break;
-      case "rect":
-        const rect = new Rect({
-          width: 100,
-          height: 40,
-          fill: "red",
-          rx: 10,
-          ry: 10,
-          zIndex: 9,
-        });
-
-        rect.on("mousedown", (e) => {});
-
-        canvasRef.current?.add(rect);
-        canvasRef.current?.sendObjectBackwards(rect);
-        canvasRef.current?.centerObject(rect);
-        canvasRef.current?.renderAll();
         break;
       default:
         break;
@@ -284,6 +305,10 @@ const TShirtEditor = () => {
   };
 
   const addImage = (file: File) => {
+    if (!canvas) {
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = (event) => {
@@ -292,22 +317,25 @@ const TShirtEditor = () => {
       imageObj.onload = async () => {
         const image = await FabricImage.fromObject(imageObj);
 
+        setCustomControls(image);
+
         image.scaleToHeight(size.height / 4);
         image.scaleToWidth(size.width / 4);
-        canvasRef.current?.add(image);
-        canvasRef.current?.centerObject(image);
-        canvasRef.current?.renderAll();
+        canvas.add(image);
+        canvas.centerObject(image);
+        canvas.renderAll();
       };
     };
 
     reader.readAsDataURL(file);
   };
 
-  const onHandleTextChange = async (
-    key: keyof SelectedTextObjectType,
-    value: any
-  ) => {
-    const activeObject = canvasRef.current?.getActiveObject();
+  const onHandleTextChange = async (key: keyof ITextProps, value: any) => {
+    if (!canvas) {
+      return;
+    }
+
+    const activeObject = canvas.getActiveObject();
 
     if (key === "fontFamily") {
       await loadFont(value?.name, value.url);
@@ -316,7 +344,7 @@ const TShirtEditor = () => {
     const preparedValue = key === "fontFamily" ? value?.name : value;
 
     activeObject?.set(key, preparedValue);
-    canvasRef.current?.requestRenderAll();
+    canvas.requestRenderAll();
     setSelectTextObject((prev) => ({ ...prev, [key]: preparedValue }));
   };
 
@@ -327,6 +355,69 @@ const TShirtEditor = () => {
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const onAddShape = (name: TShirtAvailableShapeType) => {
+    if (!canvas) {
+      return;
+    }
+
+    setActiveShapeName(name);
+
+    switch (name) {
+      case "rect":
+        const props: Partial<RectProps> = {
+          width: 100,
+          height: 40,
+          fill: "#ff0000",
+        };
+        const rect = new Rect(props);
+        setSelectRectObject(props);
+
+        setCustomControls(rect);
+
+        rect.on("mousedown", (e) => {});
+
+        canvas.add(rect);
+        canvas.sendObjectBackwards(rect);
+        canvas.centerObject(rect);
+        canvas.setActiveObject(rect);
+        canvas.renderAll();
+        break;
+      case "circle":
+        const circle = new Circle({
+          radius: 40,
+          fill: "red",
+        });
+        canvas.add(circle);
+        canvas.sendObjectBackwards(circle);
+        canvas.centerObject(circle);
+        canvas.renderAll();
+        break;
+      case "button-text":
+        {
+          addEditableBox();
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleRectPropChanges = (key: keyof RectProps, value: any) => {
+    if (!canvas) {
+      return;
+    }
+
+    const activeObject = canvas.getActiveObject();
+
+    if (!activeObject) {
+      return;
+    }
+
+    activeObject.set(key, value);
+    canvas.requestRenderAll();
+    setSelectRectObject((prev) => ({ ...prev, [key]: value }));
+  };
+
   return (
     <TShirtEditorContext.Provider
       value={{
@@ -335,6 +426,13 @@ const TShirtEditor = () => {
         onHandleTextChange,
         selectedTextObject,
         addImage,
+        onAddShape,
+        setActiveShapeName,
+        activeShapeName,
+        selectedRectObject,
+        handleRectPropChanges,
+        activeProperty,
+        setActiveProperty,
       }}
     >
       <div className="relative flex h-full">
