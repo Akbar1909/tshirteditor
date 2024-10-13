@@ -13,7 +13,9 @@ import {
   ITextProps,
   Group,
   Textbox,
+  CanvasEvents,
 } from "fabric";
+import throttle from "lodash.throttle";
 import { v4 as uuidv4 } from "uuid";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -79,6 +81,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [objects, setObjects] = useState<FabricObject[]>([]);
   const verticalLineRef = useRef<Line>(null);
+  const alignmentLines = useRef<Line[]>([]);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [activeShapeName, setActiveShapeName] = useState<
     TShirtAvailableShapeType | "idle"
@@ -152,14 +155,14 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       image.scaleToHeight(size.width);
       image.scaleToWidth(size.height);
 
-      // const designArea = new Rect({
-      //   width: 350, // Width of the design area
-      //   height: 600, // Height of the design area
-      //   fill: "rgba(0, 0, 0, 0.1)", // Semi-transparent green
-      //   stroke: "gray", // Outline color
-      //   strokeDashArray: [2, 5], // Dotted/dashed border
-      //   selectable: false, // Disable selection for the design area rectangle
-      // });
+      const designArea = new Rect({
+        width: image.width, // Width of the design area
+        height: image.height, // Height of the design area
+        fill: "rgba(0, 0, 0, 0.1)", // Semi-transparent green
+        stroke: "gray", // Outline color
+        strokeDashArray: [2, 5], // Dotted/dashed border
+        selectable: false, // Disable selection for the design area rectangle
+      });
 
       firstRender.current = true;
 
@@ -168,6 +171,25 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       tempCanvas.bringObjectToFront(verticalLineRef.current);
       tempCanvas.centerObject(image);
       tempCanvas.renderAll();
+
+      // Listen to object movement to display alignment lines
+      // Throttle the checkAlignment function
+      const throttledCheckAlignment = throttle((e: any) => {
+        const activeObject = e.target;
+        if (activeObject) {
+          checkAlignment(tempCanvas!, activeObject);
+        }
+      }, 50); // Run the checkAlignment function every 50ms
+
+      tempCanvas.on("object:moving", throttledCheckAlignment);
+
+      tempCanvas.on("selection:cleared", () => {
+        removeAlignmentLines(tempCanvas);
+        tempCanvas.renderAll();
+      });
+
+      // tempCanvas.add(designArea);
+      // tempCanvas.centerObject(designArea);
       setCanvas(tempCanvas);
     })();
 
@@ -177,6 +199,104 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       }
     };
   }, [size]);
+
+  // Function to check alignment between objects
+  const checkAlignment = (canvas: Canvas, activeObject: FabricObject) => {
+    removeAlignmentLines(canvas); // Clear previous alignment lines
+    const threshold = 5; // Pixel tolerance for alignment
+
+    // Check only nearby objects for alignment to improve performance
+    canvas.forEachObject((obj) => {
+      if (obj !== activeObject) {
+        const objRect = obj.getBoundingRect();
+        const activeRect = activeObject.getBoundingRect();
+
+        // Check top alignment
+        if (Math.abs(activeRect.top - objRect.top) <= threshold) {
+          drawAlignmentLine(
+            canvas,
+            objRect.left - 50,
+            objRect.top,
+            objRect.left + objRect.width + 50,
+            objRect.top
+          );
+        }
+
+        // Check bottom alignment
+        if (
+          Math.abs(
+            activeRect.top + activeRect.height - (objRect.top + objRect.height)
+          ) <= threshold
+        ) {
+          drawAlignmentLine(
+            canvas,
+            objRect.left - 50,
+            objRect.top + objRect.height,
+            objRect.left + objRect.width + 50,
+            objRect.top + objRect.height
+          );
+        }
+
+        // Check left alignment
+        if (Math.abs(activeRect.left - objRect.left) <= threshold) {
+          drawAlignmentLine(
+            canvas,
+            objRect.left,
+            objRect.top - 50,
+            objRect.left,
+            objRect.top + objRect.height + 50
+          );
+        }
+
+        // Check right alignment
+        if (
+          Math.abs(
+            activeRect.left + activeRect.width - (objRect.left + objRect.width)
+          ) <= threshold
+        ) {
+          drawAlignmentLine(
+            canvas,
+            objRect.left + objRect.width,
+            objRect.top - 50,
+            objRect.left + objRect.width,
+            objRect.top + objRect.height + 50
+          );
+        }
+      }
+    });
+    // Re-render the canvas
+    canvas.renderAll();
+  };
+
+  // Function to draw alignment lines
+  const drawAlignmentLine = (
+    canvas: Canvas,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+  ) => {
+    const line = new Line([x1, y1, x2, y2], {
+      stroke: "green",
+      strokeWidth: 1,
+      selectable: false,
+      evented: false,
+    });
+
+    alignmentLines.current.push(line);
+    canvas.add(line);
+  };
+
+  // Function to remove alignment lines
+  const removeAlignmentLines = (canvas: Canvas) => {
+    alignmentLines.current.forEach((line) => {
+      canvas.remove(line);
+    });
+
+    alignmentLines.current = [];
+  };
+
+  console.log(alignmentLines);
 
   const activeMethod = (method: TShirtEditorMethodType) =>
     setCurrentMethod(method);
