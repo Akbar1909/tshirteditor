@@ -188,8 +188,6 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       tempCanvas.on("object:moving", (e) => {
         changeObjectContextMenuPos(e.target, tempCanvas);
         throttledCheckAlignment(e);
-
-        // console.log(e.target.getBoundingRect());
       });
 
       tempCanvas.on("object:added", openObjectContextMenu);
@@ -402,18 +400,18 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
 
   const hideObjectContextMenu = () => setIsOpenObjectContextMenu(false);
 
-  const cloneObject = async () => {
-    if (!canvas) {
-      return;
-    }
-    const activeObject = canvas.getActiveObject();
+  // const cloneObject = async () => {
+  //   if (!canvas) {
+  //     return;
+  //   }
+  //   const activeObject = canvas.getActiveObject();
 
-    if (!activeObject) {
-      return;
-    }
+  //   if (!activeObject) {
+  //     return;
+  //   }
 
-    const cloned = await activeObject.clone();
-  };
+  //   const cloned = await activeObject.clone();
+  // };
 
   const openObjectContextMenu = () => setIsOpenObjectContextMenu(true);
 
@@ -432,7 +430,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     }));
   };
 
-  const handleTextMoving = (text: R) => {
+  const handleTextMoving = (text: FabricObject) => {
     if (!canvas || !verticalLineRef.current) {
       return;
     }
@@ -511,7 +509,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
 
           text.on("changed", (e) => handleTextChanged(e, text));
 
-          text.on("moving", (e: any) => handleTextMoving(e, text));
+          text.on("moving", (e: any) => handleTextMoving(text));
 
           text.on("mouseup", handleTextMouseUp);
 
