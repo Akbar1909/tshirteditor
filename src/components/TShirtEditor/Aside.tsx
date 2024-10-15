@@ -7,6 +7,7 @@ import { PiTShirtLight } from "react-icons/pi";
 
 import { TShirtEditorMethodType } from "./TshirtEditor.types";
 import { useTShirtEditor } from "./Context";
+import { IoShapesOutline } from "react-icons/io5";
 
 interface AsideProps extends ComponentPropsWithoutRef<"aside"> {}
 
@@ -68,7 +69,7 @@ const Aside = ({ className, ...computedProps }: AsideProps) => {
         />
         <span className="text-xs font-bold group-hover:text-white">Image</span>
       </div>
-      {/* <div
+      <div
         role="button"
         onClick={() => handleMethod("shape")}
         className={twMerge(
@@ -82,7 +83,7 @@ const Aside = ({ className, ...computedProps }: AsideProps) => {
           fontFamily="bold"
         />
         <span className="text-xs font-bold group-hover:text-white">Shape</span>
-      </div> */}
+      </div>
     </aside>
   );
 };

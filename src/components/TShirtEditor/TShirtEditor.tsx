@@ -38,6 +38,8 @@ import {
 } from "./utils";
 import useEditableBox from "./useEditableBox";
 import useEditableBoxv2 from "./useEditableBoxv2";
+import CurvedText from "./CurvedText";
+import ObjectContextMenu from "./ObjectContextMenu";
 
 const CANVAS_ID = "t-shirt_editor";
 
@@ -83,9 +85,11 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const verticalLineRef = useRef<Line>(null);
   const alignmentLines = useRef<Line[]>([]);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const objectContextMenuRef = useRef<HTMLDivElement>();
   const [activeShapeName, setActiveShapeName] = useState<
     TShirtAvailableShapeType | "idle"
   >("idle");
+  const [isOpenObjectContextMenu, setIsOpenObjectContextMenu] = useState(false);
   const [activeProperty, setActiveProperty] =
     useState<TShirtEditorContextType["activeProperty"]>("closed");
   const [currentMethod, setCurrentMethod] =
@@ -181,11 +185,29 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         }
       }, 50); // Run the checkAlignment function every 50ms
 
-      tempCanvas.on("object:moving", throttledCheckAlignment);
+      tempCanvas.on("object:moving", (e) => {
+        changeObjectContextMenuPos(e.target, tempCanvas);
+        throttledCheckAlignment(e);
+
+        // console.log(e.target.getBoundingRect());
+      });
+
+      tempCanvas.on("object:added", openObjectContextMenu);
+
+      tempCanvas.on("object:modified", (e) => {
+        changeObjectContextMenuPos(e.target, tempCanvas);
+      });
 
       tempCanvas.on("selection:cleared", () => {
         removeAlignmentLines(tempCanvas);
         tempCanvas.renderAll();
+      });
+
+      tempCanvas.on("after:render", (e) => {
+        changeObjectContextMenuPos(
+          tempCanvas.getActiveObject() as FabricObject,
+          tempCanvas
+        );
       });
 
       // tempCanvas.add(designArea);
@@ -296,10 +318,40 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     alignmentLines.current = [];
   };
 
-  console.log(alignmentLines);
-
   const activeMethod = (method: TShirtEditorMethodType) =>
     setCurrentMethod(method);
+
+  const changeObjectContextMenuPos = (target: FabricObject, canvas: Canvas) => {
+    if (!target) {
+      setIsOpenObjectContextMenu(false);
+      return;
+    }
+
+    const boundingRect = target.getBoundingRect();
+
+    // Center the div horizontally and position it above the object
+    const objectCenterX = boundingRect.left + boundingRect.width / 2; // Center X of the object
+
+    if (objectContextMenuRef.current && canvas) {
+      const div = objectContextMenuRef.current;
+      const divWidth = div.offsetWidth; // Width of the div
+      const divLeft = objectCenterX - divWidth / 2;
+      objectContextMenuRef.current.style.left = `${
+        divLeft + canvas._offset.left
+      }px`;
+      objectContextMenuRef.current.style.top = `${
+        boundingRect.top - 55 + canvas._offset.top
+      }px`;
+    }
+  };
+
+  const onHandleAnimationComplete = () => {
+    if (!objectContextMenuRef.current) {
+      return;
+    }
+
+    objectContextMenuRef.current.style.left = "-1000px";
+  };
 
   const setCustomControls = (
     obj: FabricObject,
@@ -308,6 +360,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     if (!canvas) {
       return;
     }
+
+    return;
 
     obj.controls.deleteControl = new Control({
       x: 0.5,
@@ -335,20 +389,42 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       offsetY: -16,
       offsetX: -24,
       cursorStyle: "pointer",
-      mouseUpHandler: (eventData, transform) =>
+      mouseUpHandler: (eventData, transform) => {
         cloneObject(eventData, transform, events, (clonedObject) => {
           setObjects((prev) => [...prev, clonedObject]);
-        }),
+        });
+      },
       render: renderIcon(cloneImg()),
       sizeX: 24,
       sizeY: 24,
     });
   };
 
+  const hideObjectContextMenu = () => setIsOpenObjectContextMenu(false);
+
+  const cloneObject = async () => {
+    if (!canvas) {
+      return;
+    }
+    const activeObject = canvas.getActiveObject();
+
+    if (!activeObject) {
+      return;
+    }
+
+    const cloned = await activeObject.clone();
+  };
+
+  const openObjectContextMenu = () => setIsOpenObjectContextMenu(true);
+
   const textHandleMousedown = (e, obj: FabricObject) => {
     setActiveProperty("closed");
 
     activeMethod("add-text");
+
+    openObjectContextMenu();
+
+    changeObjectContextMenuPos(e.target, canvas as Canvas);
 
     setSelectTextObject((prev) => ({
       ...prev,
@@ -356,7 +432,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     }));
   };
 
-  const handleTextMoving = (e, text) => {
+  const handleTextMoving = (text: R) => {
     if (!canvas || !verticalLineRef.current) {
       return;
     }
@@ -384,6 +460,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
 
   const handleTextDeselected = () => {
     setActiveProperty("text-object-list");
+    setIsOpenObjectContextMenu(false);
   };
 
   const onHandleMethod = ({ name }: { name: TShirtEditorMethodType }) => {
@@ -409,6 +486,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
             width: 300,
             textAlign: "center",
             height: 20,
+            diameter: 250,
           });
 
           setSelectTextObject(text);
@@ -621,63 +699,11 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
           <MyCanvas {...size} />
         </div>
 
-        {/* <article className="absolute left-[10%] w-[80%] flex items-center justify-center bottom-3">
-        <motion.div
-          className={twMerge(
-            "flex w-full text-center bg-red-500 rounded-xl items-center justify-between overflow-hidden transition-all duration-200 ease-in"
-          )}
-          initial={{ width: "100%" }} // Initial state when selectedTool is "none"
-          // animate={{ width: selectedTool !== "none" ? 0 : "100%" }} // Animate to 0% when a tool is selected
-          transition={{ duration: 0.3, type: "tween" }}
-          onAnimationComplete={() => {
-            if (selectedTool !== "none") {
-              setDrawerIsOpen(true);
-            }
-          }}
-        >
-          {tools.map(({ label, name }, i) => (
-            <div
-              onClick={() => onHandleToolChange({ name })}
-              role="button"
-              className={twMerge(
-                "px-3 py-2 rounded-md flex-1 flex items-center justify-center",
-                name === selectedTool && "bg-red-400"
-              )}
-              key={i}
-            >
-              {label}
-            </div>
-          ))}
-        </motion.div>
-      </article> */}
-
-        {/* <Draggable defaultClassName="fixed top-0 left-0" handle=".handle">
-        <div>
-          <div className="handle rounded-tl-lg rounded-tr-lg h-6 w-full bg-black/70 cursor-grab"></div>
-          <div className="w-52 h-32 rounded-bl-lg rounded-br-lg bg-white shadow-md  px-3 py-2">
-            <input
-              type="text"
-              value={selectedTextObject.text}
-              className="border"
-              name="text"
-              onChange={(e) => handleTextObjectChanges("text", e)}
-            />
-            <input
-              type="color"
-              value={selectedTextObject.fill}
-              name="fill"
-              onChange={(e) => handleTextObjectChanges("text", e)}
-            />
-
-            <button
-              onClick={handleTextAlign}
-              className="w-8 h-8 p-2 flex items-center justify-center bg-purple-600 hover:opacity-40 rounded-lg"
-            >
-              <FaAlignRight color="white" />
-            </button>
-          </div>
-        </div>
-      </Draggable> */}
+        <ObjectContextMenu
+          isOpen={isOpenObjectContextMenu}
+          ref={objectContextMenuRef}
+          onHandleAnimationComplete={onHandleAnimationComplete}
+        />
       </div>
     </TShirtEditorContext.Provider>
   );

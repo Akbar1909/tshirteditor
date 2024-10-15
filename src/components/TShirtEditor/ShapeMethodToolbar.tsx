@@ -20,10 +20,10 @@ const ShapeMethodToolbar = () => {
       name: "circle",
       icon: <MdOutlineCircle size="sm" />,
     },
-    {
-      name: "button-text",
-      icon: null,
-    },
+    // {
+    //   name: "button-text",
+    //   icon: null,
+    // },
   ];
 
   return (
