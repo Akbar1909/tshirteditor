@@ -13,14 +13,12 @@ import { FaAlignCenter } from "react-icons/fa";
 import { FaAlignJustify } from "react-icons/fa";
 
 const TextMethodToolbar = () => {
-  const [toggler, setToggler] = useState<"fill-color" | "closed">("closed");
   const [isOpen, setIsOpen] = useState(false);
   const {
     onRemoveMethod,
     selectedTextObject,
     onHandleTextChange,
     setActiveProperty,
-    ...rest
   } = useTShirtEditor();
 
   const { refs, floatingStyles } = useFloating({
@@ -31,32 +29,11 @@ const TextMethodToolbar = () => {
     // transform: false,
   });
 
-  const fonts = [
-    {
-      label: "Poppins black",
-      url: "/fonts/Poppins/Poppins-Black.ttf",
-    },
-    {
-      label: "VT323",
-      url: "/fonts/VT323-Regular.ttf",
-    },
-    {
-      label: "Poppins Black Italic",
-      url: "/fonts/Poppins/Poppins-BlackItalic.ttf",
-    },
-    {
-      label: "QwitcherGrypen-Bold",
-      url: "/fonts/Qwitcher_Grypen/QwitcherGrypen-Bold.ttf",
-    },
-  ];
-
-  console.log(selectedTextObject?.prevFill, selectedTextObject?.fill);
-
   return (
     <section>
       <div className="border-b py-3 flex items-center justify-between">
         <h3 className="text-lg font-semibold">Add New Text</h3>
-        <button onClick={onRemoveMethod}>
+        <button onClick={() => setActiveProperty("text-object-list")}>
           <IoMdClose fontSize={20} className="cursor-pointer" />
         </button>
       </div>

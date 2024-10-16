@@ -14,6 +14,7 @@ import {
   Group,
   Textbox,
   CanvasEvents,
+  ImageProps,
 } from "fabric";
 import throttle from "lodash.throttle";
 import { v4 as uuidv4 } from "uuid";
@@ -100,9 +101,10 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const [selectedTextObject, setSelectTextObject] = useState<
     Partial<ITextProps>
   >({});
+  const [selectedImageObject, setSelectedImageObject] = useState<
+    Partial<ImageProps>
+  >({});
   const [size, setSize] = useState({ width: 0, height: 0 });
-
-  const { addEditableBox } = useEditableBoxv2(canvas);
 
   useLayoutEffect(() => {
     if (!canvasContainerRef.current) {
@@ -186,6 +188,19 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       }, 50); // Run the checkAlignment function every 50ms
 
       tempCanvas.on("object:moving", (e) => {
+        if (!tempCanvas || !verticalLineRef.current) {
+          return;
+        }
+
+        verticalLineRef.current?.set("visible", true);
+        const obj = e.target as FabricObject;
+        const canvasCenterX = (tempCanvas?.getWidth() / 2) as number;
+        // Calculate the center position of the moving object
+        const objCenterX = obj ? obj.getCenterPoint().x : 0;
+        const isCenter = Math.abs(objCenterX - canvasCenterX) < 5;
+        verticalLineRef.current.set("visible", isCenter);
+        tempCanvas?.renderAndReset();
+
         changeObjectContextMenuPos(e.target, tempCanvas);
         throttledCheckAlignment(e);
       });
@@ -199,6 +214,13 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       tempCanvas.on("selection:cleared", () => {
         removeAlignmentLines(tempCanvas);
         tempCanvas.renderAll();
+      });
+
+      tempCanvas.on("mouse:up", () => {
+        if (!verticalLineRef.current) {
+          return;
+        }
+        verticalLineRef.current?.set("visible", false);
       });
 
       tempCanvas.on("after:render", (e) => {
@@ -351,67 +373,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     objectContextMenuRef.current.style.left = "-1000px";
   };
 
-  const setCustomControls = (
-    obj: FabricObject,
-    events?: Record<PropertyKey, any>
-  ) => {
-    if (!canvas) {
-      return;
-    }
-
-    return;
-
-    obj.controls.deleteControl = new Control({
-      x: 0.5,
-      y: -0.5,
-      offsetY: -16,
-      offsetX: 16,
-      cursorStyle: "pointer",
-      mouseUpHandler: (_eventData, transform) => {
-        console.log(transform.target.id);
-
-        setObjects((prev) =>
-          prev.filter((obj) => obj.id !== transform.target.id)
-        );
-
-        deleteObject(_eventData, transform);
-      },
-      render: renderIcon(deleteImg()),
-      sizeX: 24,
-      sizeY: 24,
-    });
-
-    obj.controls.cloneControl = new Control({
-      x: -0.5,
-      y: -0.5,
-      offsetY: -16,
-      offsetX: -24,
-      cursorStyle: "pointer",
-      mouseUpHandler: (eventData, transform) => {
-        cloneObject(eventData, transform, events, (clonedObject) => {
-          setObjects((prev) => [...prev, clonedObject]);
-        });
-      },
-      render: renderIcon(cloneImg()),
-      sizeX: 24,
-      sizeY: 24,
-    });
-  };
-
   const hideObjectContextMenu = () => setIsOpenObjectContextMenu(false);
-
-  // const cloneObject = async () => {
-  //   if (!canvas) {
-  //     return;
-  //   }
-  //   const activeObject = canvas.getActiveObject();
-
-  //   if (!activeObject) {
-  //     return;
-  //   }
-
-  //   const cloned = await activeObject.clone();
-  // };
 
   const openObjectContextMenu = () => setIsOpenObjectContextMenu(true);
 
@@ -430,35 +392,93 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     }));
   };
 
-  const handleTextMoving = (text: FabricObject) => {
-    if (!canvas || !verticalLineRef.current) {
-      return;
-    }
-
-    verticalLineRef.current?.set("visible", true);
-    const obj = text;
-    const canvasCenterX = (canvas?.getWidth() / 2) as number;
-    // Calculate the center position of the moving object
-    const objCenterX = obj ? obj.getCenterPoint().x : 0;
-    const isCenter = Math.abs(objCenterX - canvasCenterX) < 5;
-    verticalLineRef.current.set("visible", isCenter);
-    canvas?.renderAndReset();
-  };
-
-  const handleTextMouseUp = () => {
-    if (!verticalLineRef.current) {
-      return;
-    }
-    verticalLineRef.current?.set("visible", false);
-  };
-
-  const handleTextChanged = (e, obj: FabricObject) => {
+  const handleTextChanged = (obj: FabricObject) => {
     setSelectTextObject((prev) => ({ ...prev, text: obj.get("text") }));
   };
 
   const handleTextDeselected = () => {
     setActiveProperty("text-object-list");
     setIsOpenObjectContextMenu(false);
+  };
+
+  const attachEventHandlersToText = (textObject: Textbox) => {
+    textObject.on("mousedown", (e) => textHandleMousedown(e, textObject));
+    textObject.on("deselected", handleTextDeselected);
+    textObject.on("changed", () => handleTextChanged(textObject));
+  };
+
+  // BEGIN NOTE IMAGE handlers ======
+
+  const handleImageDeselected = () => {
+    setActiveProperty("closed");
+    setIsOpenObjectContextMenu(false);
+  };
+
+  const imageHandleMouseDown = (e) => {
+    setActiveProperty("closed");
+    activeMethod("image-object-list");
+    openObjectContextMenu();
+    changeObjectContextMenuPos(e.target, canvas as Canvas);
+  };
+
+  const attachEventHandlersToImage = (imageObject: FabricImage) => {
+    imageObject.on("mousedown", imageHandleMouseDown);
+    imageObject.on("deselected", handleImageDeselected);
+  };
+
+  // END IMAGE handlers ======
+
+  const cloneObject = async () => {
+    if (!canvas) {
+      return;
+    }
+    const activeObject = canvas.getActiveObject();
+
+    if (!activeObject) {
+      return;
+    }
+
+    const cloned = await activeObject.clone();
+
+    cloned.left += 10;
+    cloned.top += 10;
+
+    switch (cloned.type) {
+      case "textbox":
+        {
+          attachEventHandlersToText(cloned as Textbox);
+        }
+        break;
+      default:
+        break;
+    }
+
+    cloned.set("id", uuidv4());
+
+    setObjects((prev) => [...prev, cloned]);
+
+    canvas.renderAll();
+    canvas.add(cloned);
+  };
+
+  const deleteObject = () => {
+    if (!canvas) {
+      return;
+    }
+    const activeObject = canvas.getActiveObject();
+
+    if (!activeObject) {
+      return;
+    }
+
+    setObjects((prev) =>
+      prev.filter((item) => item.get("id") !== activeObject.get("id"))
+    );
+
+    hideObjectContextMenu();
+
+    canvas.remove(activeObject);
+    canvas.renderAll();
   };
 
   const onHandleMethod = ({ name }: { name: TShirtEditorMethodType }) => {
@@ -488,30 +508,9 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
           });
 
           setSelectTextObject(text);
-
-          setCustomControls(text, {
-            mousedown: textHandleMousedown,
-            deselected: handleTextDeselected,
-            moving: handleTextMoving,
-            mouseup: handleTextMouseUp,
-            changed: handleTextChanged,
-          });
-
           setObjects((prev) => [...prev, text]);
-
           canvas.setActiveObject(text);
-
-          text.on("mousedown", (e) => textHandleMousedown(e, text));
-
-          text.on("deselected", handleTextDeselected);
-
-          text.on("drop", () => {});
-
-          text.on("changed", (e) => handleTextChanged(e, text));
-
-          text.on("moving", (e: any) => handleTextMoving(text));
-
-          text.on("mouseup", handleTextMouseUp);
+          attachEventHandlersToText(text);
 
           canvas.add(text);
           canvas.bringObjectToFront(text);
@@ -537,16 +536,24 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     reader.onload = (event) => {
       const imageObj = new Image();
       imageObj.src = event.target?.result as string;
+
       imageObj.onload = async () => {
         const image = await FabricImage.fromObject(imageObj);
 
-        setCustomControls(image);
+        attachEventHandlersToImage(image);
+
+        setObjects((prev) => [...prev, image]);
+
+        openObjectContextMenu();
 
         image.scaleToHeight(size.height / 4);
         image.scaleToWidth(size.width / 4);
         canvas.add(image);
         canvas.centerObject(image);
         canvas.renderAll();
+
+        setSelectedImageObject(image);
+        setActiveProperty("image-detail");
       };
     };
 
@@ -613,8 +620,6 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         const rect = new Rect(props);
         setSelectRectObject(props);
 
-        setCustomControls(rect);
-
         rect.on("mousedown", (e) => {});
 
         canvas.add(rect);
@@ -633,11 +638,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         canvas.centerObject(circle);
         canvas.renderAll();
         break;
-      case "button-text":
-        {
-          addEditableBox();
-        }
-        break;
+
       default:
         break;
     }
@@ -688,6 +689,10 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         objects,
         setObjects,
         setActiveObject,
+        cloneObject,
+        deleteObject,
+        selectedImageObject,
+        setSelectedImageObject,
       }}
     >
       <div className="relative flex h-full">

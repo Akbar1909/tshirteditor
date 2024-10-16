@@ -8,6 +8,8 @@ import { useTShirtEditor } from "./Context";
 import RectShapeToolbar from "./RectShapeToolbar";
 import FontList from "./FontList";
 import TextObjectsList from "./TextObjectsList";
+import ImageObjectsList from "./ImageObjectList";
+import ImageDetail from "./ImageDetail";
 
 interface ActiveToolPropertiesProps extends ComponentPropsWithoutRef<"div"> {}
 const ActiveToolProperties = ({
@@ -41,8 +43,12 @@ const ActiveToolProperties = ({
           return wrap(<TextObjectsList />);
       }
       return wrap(<TextMethodToolbar />);
-    case "image":
-      return wrap(<ImageMethodToolbar />);
+    case "image-object-list":
+      switch (activeProperty) {
+        case "image-detail":
+          return wrap(<ImageDetail />);
+      }
+      return wrap(<ImageObjectsList />);
     case "shape":
       switch (activeShapeName) {
         case "rect":

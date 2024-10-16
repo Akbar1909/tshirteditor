@@ -3,7 +3,7 @@ import {
   TShirtAvailableShapeType,
   TShirtEditorMethodType,
 } from "./TshirtEditor.types";
-import { FabricObject, ITextProps, RectProps } from "fabric";
+import { FabricObject, ImageProps, ITextProps, RectProps } from "fabric";
 
 export type TShirtEditorContextType = {
   onRemoveMethod: () => void;
@@ -17,9 +17,9 @@ export type TShirtEditorContextType = {
   >;
   activeShapeName: TShirtAvailableShapeType | "idle";
   selectedRectObject: Partial<RectProps>;
-  activeProperty: "font-list" | "closed" | "text-object-list";
+  activeProperty: "font-list" | "closed" | "text-object-list" | "image-detail";
   setActiveProperty: Dispatch<
-    SetStateAction<"font-list" | "closed" | "text-object-list">
+    SetStateAction<"font-list" | "closed" | "text-object-list" | "image-detail">
   >;
   handleRectPropChanges: (key: keyof RectProps, value: any) => void;
   currentMethod: TShirtEditorMethodType;
@@ -27,6 +27,10 @@ export type TShirtEditorContextType = {
   setObjects: Dispatch<SetStateAction<FabricObject[]>>;
   objects: FabricObject[];
   setActiveObject: (obj: FabricObject) => void;
+  cloneObject: () => Promise<void>;
+  deleteObject: () => void;
+  selectedImageObject: Partial<ImageProps>;
+  setSelectedImageObject: Dispatch<SetStateAction<Partial<ImageProps>>>;
 };
 
 export const TShirtEditorContext =
