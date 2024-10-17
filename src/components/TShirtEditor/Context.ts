@@ -9,7 +9,7 @@ export type TShirtEditorContextType = {
   onRemoveMethod: () => void;
   onHandleMethod: ({ name }: { name: TShirtEditorMethodType }) => void;
   onHandleTextChange: (key: keyof ITextProps, value: any) => Promise<void>;
-  selectedTextObject: ITextProps;
+  selectedTextObject: Partial<ITextProps>;
   onAddShape: (name: TShirtAvailableShapeType) => void;
   addImage: (file: File) => void;
   setActiveShapeName: Dispatch<
@@ -31,6 +31,8 @@ export type TShirtEditorContextType = {
   deleteObject: () => void;
   selectedImageObject: Partial<ImageProps>;
   setSelectedImageObject: Dispatch<SetStateAction<Partial<ImageProps>>>;
+  bringObjectToFront: () => void;
+  sendObjectToBack: () => void;
 };
 
 export const TShirtEditorContext =

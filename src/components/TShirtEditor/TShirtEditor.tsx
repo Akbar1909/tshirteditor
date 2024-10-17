@@ -2,18 +2,14 @@
 import {
   Canvas,
   FabricImage,
-  IText,
   Rect,
   InteractiveFabricObject,
   Line,
-  Control,
   Circle,
   RectProps,
   FabricObject,
   ITextProps,
-  Group,
   Textbox,
-  CanvasEvents,
   ImageProps,
 } from "fabric";
 import throttle from "lodash.throttle";
@@ -27,19 +23,7 @@ import MyCanvas from "./Canvas";
 import Aside from "./Aside";
 import ActiveToolProperties from "./ActiveToolProperties";
 import { TShirtEditorContext, TShirtEditorContextType } from "./Context";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  cloneImg,
-  cloneObject,
-  deleteIcon,
-  deleteImg,
-  deleteObject,
-  loadFont,
-  renderIcon,
-} from "./utils";
-import useEditableBox from "./useEditableBox";
-import useEditableBoxv2 from "./useEditableBoxv2";
-import CurvedText from "./CurvedText";
+import { loadFont } from "./utils";
 import ObjectContextMenu from "./ObjectContextMenu";
 
 const CANVAS_ID = "t-shirt_editor";
@@ -150,7 +134,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       );
 
       const image = await FabricImage.fromURL(
-        imageUrls[0],
+        imageUrls[1],
         {},
         {
           selectable: false,
@@ -415,7 +399,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   };
 
   const imageHandleMouseDown = (e) => {
-    setActiveProperty("closed");
+    setActiveProperty("image-detail");
     activeMethod("image-object-list");
     openObjectContextMenu();
     changeObjectContextMenuPos(e.target, canvas as Canvas);
@@ -449,6 +433,11 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
           attachEventHandlersToText(cloned as Textbox);
         }
         break;
+      case "image":
+        {
+          attachEventHandlersToImage(cloned as FabricImage);
+        }
+        break;
       default:
         break;
     }
@@ -479,6 +468,34 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
 
     canvas.remove(activeObject);
     canvas.renderAll();
+  };
+
+  const bringObjectToFront = () => {
+    if (!canvas) {
+      return;
+    }
+
+    const activeObject = canvas.getActiveObject();
+
+    if (!activeObject) {
+      return;
+    }
+
+    canvas.bringObjectToFront(activeObject);
+  };
+
+  const sendObjectToBack = () => {
+    if (!canvas) {
+      return;
+    }
+
+    const activeObject = canvas.getActiveObject();
+
+    if (!activeObject) {
+      return;
+    }
+
+    canvas.sendObjectBackwards(activeObject);
   };
 
   const onHandleMethod = ({ name }: { name: TShirtEditorMethodType }) => {
@@ -693,6 +710,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         deleteObject,
         selectedImageObject,
         setSelectedImageObject,
+        bringObjectToFront,
+        sendObjectToBack,
       }}
     >
       <div className="relative flex h-full">

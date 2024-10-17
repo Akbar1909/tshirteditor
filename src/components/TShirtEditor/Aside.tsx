@@ -59,7 +59,7 @@ const Aside = ({ className, ...computedProps }: AsideProps) => {
         onClick={() => handleMethod("image-object-list")}
         className={twMerge(
           "flex px-2 py-3 group rounded-xl flex-col gap-2 items-center cursor-pointer hover:bg-blue-300  transition-all duration-200",
-          method === "image" && "bg-blue-400 text-white"
+          method === "image-object-list" && "bg-blue-400 text-white"
         )}
       >
         <CiImageOn

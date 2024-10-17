@@ -7,8 +7,12 @@ import React, {
 import { twMerge } from "tailwind-merge";
 import { IoCopyOutline } from "react-icons/io5";
 import { IoTrashOutline } from "react-icons/io5";
+import { IoPlaySkipForwardOutline } from "react-icons/io5";
+import { LiaStepBackwardSolid } from "react-icons/lia";
 import { motion } from "framer-motion";
 import { useTShirtEditor } from "./Context";
+import { TbStackBackward } from "react-icons/tb";
+import { TbStackForward } from "react-icons/tb";
 
 type elementRef = ComponentPropsWithRef<"div">["ref"];
 
@@ -22,7 +26,8 @@ const ObjectContextMenu = forwardRef(
     { isOpen, onHandleAnimationComplete }: ObjectContextMenuProps,
     elementRef: elementRef
   ) => {
-    const { cloneObject, deleteObject } = useTShirtEditor();
+    const { cloneObject, deleteObject, bringObjectToFront, sendObjectToBack } =
+      useTShirtEditor();
     const [confirmation, setConfirmation] = useState<
       "idle" | "delete-confirmation"
     >("idle");
@@ -99,16 +104,26 @@ const ObjectContextMenu = forwardRef(
           >
             <IoTrashOutline fontSize={24} />
           </motion.button>
-          {/* <motion.button
+          <motion.button
             onClick={() => {
-              setConfirmation("delete-confirmation");
+              bringObjectToFront();
             }}
             className={twMerge(
               "flex items-center justify-center h-full px-2 border-r"
             )}
           >
-            <IoTrashOutline fontSize={24} />
-          </motion.button> */}
+            <TbStackForward fontSize={24} />
+          </motion.button>
+          <motion.button
+            onClick={() => {
+              sendObjectToBack();
+            }}
+            className={twMerge(
+              "flex items-center justify-center h-full px-2 border-r"
+            )}
+          >
+            <TbStackBackward fontSize={24} />
+          </motion.button>
         </motion.div>
       </motion.div>
     );

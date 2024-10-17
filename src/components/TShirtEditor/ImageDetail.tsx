@@ -1,9 +1,10 @@
 import React from "react";
 import { IoMdClose } from "react-icons/io";
 import { useTShirtEditor } from "./Context";
+import Image from "next/image";
 
 const ImageDetail = () => {
-  const { setActiveProperty } = useTShirtEditor();
+  const { setActiveProperty, selectedImageObject } = useTShirtEditor();
   return (
     <section>
       <div className="border-b py-3 flex items-center justify-between">
@@ -11,6 +12,15 @@ const ImageDetail = () => {
         <button onClick={() => setActiveProperty("idle")}>
           <IoMdClose fontSize={20} className="cursor-pointer" />
         </button>
+      </div>
+
+      <div className="mt-10">
+        <Image
+          src={selectedImageObject.getSrc()}
+          alt="Test"
+          width={200}
+          height={100}
+        />
       </div>
     </section>
   );
