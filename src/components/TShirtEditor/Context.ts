@@ -4,6 +4,7 @@ import {
   TShirtEditorMethodType,
 } from "./TshirtEditor.types";
 import { FabricObject, ImageProps, ITextProps, RectProps } from "fabric";
+import { Group } from "next/dist/shared/lib/router/utils/route-regex";
 
 export type TShirtEditorContextType = {
   onRemoveMethod: () => void;
@@ -33,6 +34,10 @@ export type TShirtEditorContextType = {
   setSelectedImageObject: Dispatch<SetStateAction<Partial<ImageProps>>>;
   bringObjectToFront: () => void;
   sendObjectToBack: () => void;
+  output: {
+    image: string;
+    group: Group | null;
+  }[];
 };
 
 export const TShirtEditorContext =

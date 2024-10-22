@@ -20,6 +20,9 @@ const nextConfig = {
       {
         hostname: "img.freepik.com",
       },
+      {
+        hostname: "www.transparentpng.com",
+      },
     ],
   },
 };

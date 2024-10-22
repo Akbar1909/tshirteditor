@@ -11,6 +11,7 @@ import {
   ITextProps,
   Textbox,
   ImageProps,
+  Group,
 } from "fabric";
 import throttle from "lodash.throttle";
 import { v4 as uuidv4 } from "uuid";
@@ -25,6 +26,9 @@ import ActiveToolProperties from "./ActiveToolProperties";
 import { TShirtEditorContext, TShirtEditorContextType } from "./Context";
 import { loadFont } from "./utils";
 import ObjectContextMenu from "./ObjectContextMenu";
+import NextImage from "next/image";
+import usePreviewCanvas from "./usePreviewCanvas";
+import PreviewCanvas from "./PreviewCanvas";
 
 const CANVAS_ID = "t-shirt_editor";
 
@@ -65,12 +69,16 @@ interface TshirtEditorPorps {
 
 const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const firstRender = useRef(false);
+  const [output, setOutput] = useState<
+    { image: string; group: Group | null; svg: ny }[]
+  >(() => imageUrls.map((url) => ({ image: url, group: null, svg: "" })));
   const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [objects, setObjects] = useState<FabricObject[]>([]);
   const verticalLineRef = useRef<Line>(null);
   const alignmentLines = useRef<Line[]>([]);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const objectContextMenuRef = useRef<HTMLDivElement>();
+  const [previewDataUrl, setPreviewDataUrl] = useState("");
   const [activeShapeName, setActiveShapeName] = useState<
     TShirtAvailableShapeType | "idle"
   >("idle");
@@ -89,6 +97,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     Partial<ImageProps>
   >({});
   const [size, setSize] = useState({ width: 0, height: 0 });
+
+  const { updatePreview, previewSvg } = usePreviewCanvas(canvas);
 
   useLayoutEffect(() => {
     if (!canvasContainerRef.current) {
@@ -175,6 +185,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         if (!tempCanvas || !verticalLineRef.current) {
           return;
         }
+
+        updatePreview(tempCanvas);
 
         verticalLineRef.current?.set("visible", true);
         const obj = e.target as FabricObject;
@@ -686,6 +698,21 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     canvas.renderAll();
   };
 
+  const handlePreviewItemClick = (i: number) => {
+    console.log(canvas?.toSVG());
+    setOutput((prev) => {
+      const item = prev[i];
+
+      const index = prev.findIndex((item, j) => i === j);
+
+      return [
+        ...prev.slice(0, index),
+        { ...item, svg: canvas?.toSVG() },
+        ...prev.slice(index),
+      ];
+    });
+  };
+
   return (
     <TShirtEditorContext.Provider
       value={{
@@ -712,13 +739,44 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         setSelectedImageObject,
         bringObjectToFront,
         sendObjectToBack,
+        output,
       }}
     >
       <div className="relative flex h-full">
         <Aside className="w-20" />
         <ActiveToolProperties className="w-[350px]" />
-        <div ref={canvasContainerRef} className="flex-1">
+        <div ref={canvasContainerRef} className="flex-1 relative">
           <MyCanvas {...size} />
+          <div className="absolute top-0 right-3">
+            <div className="flex flex-col gap-2">
+              <div
+                className="[&>svg]:w-20 [&>svg]:h-20"
+                dangerouslySetInnerHTML={{ __html: previewSvg }}
+              ></div>
+              {output.map(({ image, svg }, i) => (
+                <div
+                  key={i}
+                  className="shadow-md cursor-pointer rounded-md p-3"
+                >
+                  {svg ? (
+                    <div
+                      className="w-20 h-20 [&>svg]:w-20 [&>svg]:h-20"
+                      dangerouslySetInnerHTML={{ __html: svg }}
+                    />
+                  ) : (
+                    <NextImage
+                      onClick={() => handlePreviewItemClick(i)}
+                      src={image}
+                      alt="text"
+                      width={80}
+                      height={80}
+                      crossOrigin="anonymous"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <ObjectContextMenu
