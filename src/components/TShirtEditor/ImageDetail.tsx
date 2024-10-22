@@ -15,12 +15,14 @@ const ImageDetail = () => {
       </div>
 
       <div className="mt-10">
-        <Image
-          src={selectedImageObject.getSrc()}
-          alt="Test"
-          width={200}
-          height={100}
-        />
+        {selectedImageObject?.getSrc?.() && (
+          <Image
+            src={selectedImageObject.getSrc?.()}
+            alt="Test"
+            width={200}
+            height={100}
+          />
+        )}
       </div>
     </section>
   );

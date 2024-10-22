@@ -23,6 +23,9 @@ const nextConfig = {
       {
         hostname: "www.transparentpng.com",
       },
+      {
+        hostname: "localhost",
+      },
     ],
   },
 };

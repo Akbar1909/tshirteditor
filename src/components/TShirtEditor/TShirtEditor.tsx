@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import {
   Canvas,
@@ -29,6 +30,8 @@ import ObjectContextMenu from "./ObjectContextMenu";
 import NextImage from "next/image";
 import usePreviewCanvas from "./usePreviewCanvas";
 import PreviewCanvas from "./PreviewCanvas";
+import { flushSync } from "react-dom";
+import { twMerge } from "tailwind-merge";
 
 const CANVAS_ID = "t-shirt_editor";
 
@@ -70,15 +73,21 @@ interface TshirtEditorPorps {
 const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const firstRender = useRef(false);
   const [output, setOutput] = useState<
-    { image: string; group: Group | null; svg: ny }[]
-  >(() => imageUrls.map((url) => ({ image: url, group: null, svg: "" })));
+    Record<PropertyKey, { image: string; json: any; svg: any }>
+  >(() =>
+    imageUrls.reduce(
+      (acc, cur, i) => ({ ...acc, [i]: { image: cur, svg: null, json: null } }),
+      {}
+    )
+  );
   const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [objects, setObjects] = useState<FabricObject[]>([]);
   const verticalLineRef = useRef<Line>(null);
+  const imageRef = useRef<FabricImage>(null);
   const alignmentLines = useRef<Line[]>([]);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const objectContextMenuRef = useRef<HTMLDivElement>();
-  const [previewDataUrl, setPreviewDataUrl] = useState("");
+  const activeIndex = useRef(0);
   const [activeShapeName, setActiveShapeName] = useState<
     TShirtAvailableShapeType | "idle"
   >("idle");
@@ -98,7 +107,10 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   >({});
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  const { updatePreview, previewSvg } = usePreviewCanvas(canvas);
+  const { updatePreview, previewSvg } = usePreviewCanvas(
+    setOutput,
+    activeIndex.current
+  );
 
   useLayoutEffect(() => {
     if (!canvasContainerRef.current) {
@@ -117,14 +129,15 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     }
 
     (async () => {
-      if (firstRender.current || canvas) {
+      if (canvas) {
         return;
       }
+
+      localStorage.setItem("activeIndex", "0");
 
       const tempCanvas = new Canvas(CANVAS_ID, {
         renderOnAddRemove: true,
         preserveObjectStacking: true,
-        backgroundColor: "#f8edeb",
       });
 
       // Get the center of the canvas
@@ -144,7 +157,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
       );
 
       const image = await FabricImage.fromURL(
-        imageUrls[1],
+        imageUrls[activeIndex.current],
         {},
         {
           selectable: false,
@@ -154,17 +167,8 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
 
       image.scaleToHeight(size.width);
       image.scaleToWidth(size.height);
-
-      const designArea = new Rect({
-        width: image.width, // Width of the design area
-        height: image.height, // Height of the design area
-        fill: "rgba(0, 0, 0, 0.1)", // Semi-transparent green
-        stroke: "gray", // Outline color
-        strokeDashArray: [2, 5], // Dotted/dashed border
-        selectable: false, // Disable selection for the design area rectangle
-      });
-
-      firstRender.current = true;
+      image.set("name1", "bg");
+      image.set("id", uuidv4());
 
       tempCanvas.add(image);
       tempCanvas.add(verticalLineRef.current);
@@ -201,14 +205,19 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         throttledCheckAlignment(e);
       });
 
-      tempCanvas.on("object:added", openObjectContextMenu);
+      tempCanvas.on("object:added", () => {
+        updatePreview(tempCanvas);
+        openObjectContextMenu();
+      });
 
       tempCanvas.on("object:modified", (e) => {
+        updatePreview(tempCanvas);
         changeObjectContextMenuPos(e.target, tempCanvas);
       });
 
       tempCanvas.on("selection:cleared", () => {
         removeAlignmentLines(tempCanvas);
+        updatePreview(tempCanvas);
         tempCanvas.renderAll();
       });
 
@@ -216,6 +225,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         if (!verticalLineRef.current) {
           return;
         }
+        updatePreview(tempCanvas);
         verticalLineRef.current?.set("visible", false);
       });
 
@@ -236,7 +246,30 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
         canvas.dispose();
       }
     };
-  }, [size]);
+  }, [size, activeIndex, updatePreview]);
+
+  const attachVerticalLineRef = () => {
+    if (!canvas) {
+      return;
+    }
+
+    const canvasCenterX = canvas.getWidth() / 2;
+    const canvasHeight = canvas.getHeight();
+
+    verticalLineRef.current = new Line(
+      [canvasCenterX, 0, canvasCenterX, canvasHeight],
+      {
+        stroke: "red",
+        name: "vertical-line",
+        selectable: false, // Prevent the line from being selected
+        evented: false, // Disable interaction with the line
+        visible: false, // Initially hide the line
+      }
+    );
+
+    canvas.add(verticalLineRef.current);
+    canvas.bringObjectToFront(verticalLineRef.current);
+  };
 
   // Function to check alignment between objects
   const checkAlignment = (canvas: Canvas, activeObject: FabricObject) => {
@@ -698,19 +731,54 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     canvas.renderAll();
   };
 
-  const handlePreviewItemClick = (i: number) => {
-    console.log(canvas?.toSVG());
-    setOutput((prev) => {
-      const item = prev[i];
+  const handlePreviewItemClick = async (i: number) => {
+    const json = canvas?.toJSON();
 
-      const index = prev.findIndex((item, j) => i === j);
-
-      return [
-        ...prev.slice(0, index),
-        { ...item, svg: canvas?.toSVG() },
-        ...prev.slice(index),
-      ];
+    flushSync(() => {
+      setOutput((prev) => ({
+        ...prev,
+        [activeIndex.current]: {
+          ...prev[activeIndex.current],
+          json,
+        },
+      }));
     });
+
+    activeIndex.current = i;
+    localStorage.setItem("activeIndex", i.toString());
+
+    canvas?.clear();
+
+    if (output[i].json) {
+      await canvas?.loadFromJSON(JSON.stringify(output[i].json));
+      canvas?.getObjects().map((obj) => {
+        if (obj.type === "textbox") {
+          attachEventHandlersToText(obj as Textbox);
+        } else if (obj.type === "image" && obj.get("name") !== "bg") {
+          attachEventHandlersToImage(obj as FabricImage);
+        }
+      });
+      canvas?.renderAll();
+      return;
+    }
+
+    const image = await FabricImage.fromURL(
+      output[i].image,
+      {},
+      {
+        selectable: false,
+        centeredScaling: true,
+      }
+    );
+
+    image.scaleToHeight(size.width);
+    image.scaleToWidth(size.height);
+    image.set("name1", "bg");
+    image.set("id", uuidv4());
+
+    canvas?.add(image);
+    canvas?.centerObject(image);
+    canvas?.renderAll();
   };
 
   return (
@@ -749,19 +817,20 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
           <MyCanvas {...size} />
           <div className="absolute top-0 right-3">
             <div className="flex flex-col gap-2">
-              <div
-                className="[&>svg]:w-20 [&>svg]:h-20"
-                dangerouslySetInnerHTML={{ __html: previewSvg }}
-              ></div>
-              {output.map(({ image, svg }, i) => (
+              {Object.values(output).map(({ image, svg }, i) => (
                 <div
                   key={i}
-                  className="shadow-md cursor-pointer rounded-md p-3"
+                  className={twMerge(
+                    "shadow-md cursor-pointer rounded-md p-3 hover:scale-105 transition-all duration-200",
+                    activeIndex.current === i && "border border-blue-300"
+                  )}
+                  role="button"
                 >
                   {svg ? (
                     <div
                       className="w-20 h-20 [&>svg]:w-20 [&>svg]:h-20"
                       dangerouslySetInnerHTML={{ __html: svg }}
+                      onClick={() => handlePreviewItemClick(i)}
                     />
                   ) : (
                     <NextImage
