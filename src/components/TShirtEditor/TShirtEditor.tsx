@@ -67,16 +67,31 @@ InteractiveFabricObject.ownDefaults = {
 };
 
 interface TshirtEditorPorps {
-  imageUrls: string[];
+  imageUrls: {
+    id: number;
+    url: string;
+  }[];
 }
 
 const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const firstRender = useRef(false);
   const [output, setOutput] = useState<
-    Record<PropertyKey, { image: string; json: any; svg: any }>
+    Record<
+      PropertyKey,
+      {
+        image: string;
+        json: any;
+        svg: any;
+        id: number;
+        objects: FabricObject[];
+      }
+    >
   >(() =>
     imageUrls.reduce(
-      (acc, cur, i) => ({ ...acc, [i]: { image: cur, svg: null, json: null } }),
+      (acc, cur, i) => ({
+        ...acc,
+        [cur.id]: { image: cur.url, svg: null, objects: [], id: cur.id },
+      }),
       {}
     )
   );
@@ -87,7 +102,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   const alignmentLines = useRef<Line[]>([]);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const objectContextMenuRef = useRef<HTMLDivElement>();
-  const activeIndex = useRef(0);
+  const [activeId, setActiveId] = useState(0);
   const [activeShapeName, setActiveShapeName] = useState<
     TShirtAvailableShapeType | "idle"
   >("idle");
@@ -107,10 +122,7 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
   >({});
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  const { updatePreview, previewSvg } = usePreviewCanvas(
-    setOutput,
-    activeIndex.current
-  );
+  const { updatePreview } = usePreviewCanvas(setOutput, activeId);
 
   useLayoutEffect(() => {
     if (!canvasContainerRef.current) {
@@ -123,130 +135,143 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     });
   }, []);
 
+  const createAnBgImage = async (c: Canvas, imageUrl: string) => {
+    const image = await FabricImage.fromURL(
+      imageUrl,
+      {},
+      {
+        selectable: false,
+        centeredScaling: true,
+      }
+    );
+
+    image.scaleToHeight(size.width);
+    image.scaleToWidth(size.height);
+    image.set("name1", "bg");
+    image.set("id", uuidv4());
+
+    c.add(image);
+    c.sendObjectBackwards(image);
+    c.centerObject(image);
+  };
+
+  const createVerticalLine = (c: Canvas) => {
+    // Get the center of the canvas
+    const canvasCenterX = c.getWidth() / 2;
+    const canvasHeight = c.getHeight();
+
+    const line = new Line([canvasCenterX, 0, canvasCenterX, canvasHeight], {
+      stroke: "red",
+      name: "vertical-line",
+      selectable: false, // Prevent the line from being selected
+      evented: false, // Disable interaction with the line
+      visible: false, // Initially hide the line
+    });
+
+    verticalLineRef.current = line;
+
+    c.add(verticalLineRef.current);
+    c.bringObjectToFront(verticalLineRef.current);
+  };
+
+  const initCanvas = async () => {
+    if (canvas) {
+      return;
+    }
+
+    localStorage.setItem("activeId", "0");
+
+    const tempCanvas = new Canvas(CANVAS_ID, {
+      renderOnAddRemove: true,
+      preserveObjectStacking: true,
+    });
+
+    createAnBgImage(tempCanvas, output[0].image);
+    createVerticalLine(tempCanvas);
+    setActiveId(output[0].id);
+
+    // Listen to object movement to display alignment lines
+    // Throttle the checkAlignment function
+    const throttledCheckAlignment = throttle((e: any) => {
+      const activeObject = e.target;
+      if (activeObject) {
+        checkAlignment(tempCanvas!, activeObject);
+      }
+    }, 50); // Run the checkAlignment function every 50ms
+
+    tempCanvas.on("object:moving", (e) => {
+      if (!tempCanvas || !verticalLineRef.current) {
+        return;
+      }
+
+      updatePreview(tempCanvas);
+
+      verticalLineRef.current?.set("visible", true);
+      const obj = e.target as FabricObject;
+      const canvasCenterX = (tempCanvas?.getWidth() / 2) as number;
+      // Calculate the center position of the moving object
+      const objCenterX = obj ? obj.getCenterPoint().x : 0;
+      const isCenter = Math.abs(objCenterX - canvasCenterX) < 5;
+      verticalLineRef.current.set("visible", isCenter);
+      tempCanvas?.renderAndReset();
+
+      changeObjectContextMenuPos(e.target, tempCanvas);
+      throttledCheckAlignment(e);
+    });
+
+    tempCanvas.on("object:added", () => {
+      updatePreview(tempCanvas);
+      openObjectContextMenu();
+    });
+
+    tempCanvas.on("object:modified", (e) => {
+      updatePreview(tempCanvas);
+      changeObjectContextMenuPos(e.target, tempCanvas);
+    });
+
+    tempCanvas.on("selection:cleared", () => {
+      removeAlignmentLines(tempCanvas);
+      updatePreview(tempCanvas);
+      tempCanvas.renderAll();
+    });
+
+    tempCanvas.on("mouse:up", () => {
+      if (!verticalLineRef.current) {
+        return;
+      }
+      updatePreview(tempCanvas);
+      verticalLineRef.current?.set("visible", false);
+    });
+
+    tempCanvas.on("after:render", (e) => {
+      changeObjectContextMenuPos(
+        tempCanvas.getActiveObject() as FabricObject,
+        tempCanvas
+      );
+    });
+
+    tempCanvas.renderAll();
+
+    setCanvas(tempCanvas);
+  };
+
   useEffect(() => {
     if (size.height === 0 || size.width === 0) {
       return;
     }
 
-    (async () => {
-      if (canvas) {
-        return;
-      }
-
-      localStorage.setItem("activeIndex", "0");
-
-      const tempCanvas = new Canvas(CANVAS_ID, {
-        renderOnAddRemove: true,
-        preserveObjectStacking: true,
-      });
-
-      // Get the center of the canvas
-      const canvasCenterX = tempCanvas.getWidth() / 2;
-      const canvasHeight = tempCanvas.getHeight();
-
-      // Create a vertical center line
-      verticalLineRef.current = new Line(
-        [canvasCenterX, 0, canvasCenterX, canvasHeight],
-        {
-          stroke: "red",
-          name: "vertical-line",
-          selectable: false, // Prevent the line from being selected
-          evented: false, // Disable interaction with the line
-          visible: false, // Initially hide the line
-        }
-      );
-
-      const image = await FabricImage.fromURL(
-        imageUrls[activeIndex.current],
-        {},
-        {
-          selectable: false,
-          centeredScaling: true,
-        }
-      );
-
-      image.scaleToHeight(size.width);
-      image.scaleToWidth(size.height);
-      image.set("name1", "bg");
-      image.set("id", uuidv4());
-
-      tempCanvas.add(image);
-      tempCanvas.add(verticalLineRef.current);
-      tempCanvas.bringObjectToFront(verticalLineRef.current);
-      tempCanvas.centerObject(image);
-      tempCanvas.renderAll();
-
-      // Listen to object movement to display alignment lines
-      // Throttle the checkAlignment function
-      const throttledCheckAlignment = throttle((e: any) => {
-        const activeObject = e.target;
-        if (activeObject) {
-          checkAlignment(tempCanvas!, activeObject);
-        }
-      }, 50); // Run the checkAlignment function every 50ms
-
-      tempCanvas.on("object:moving", (e) => {
-        if (!tempCanvas || !verticalLineRef.current) {
-          return;
-        }
-
-        updatePreview(tempCanvas);
-
-        verticalLineRef.current?.set("visible", true);
-        const obj = e.target as FabricObject;
-        const canvasCenterX = (tempCanvas?.getWidth() / 2) as number;
-        // Calculate the center position of the moving object
-        const objCenterX = obj ? obj.getCenterPoint().x : 0;
-        const isCenter = Math.abs(objCenterX - canvasCenterX) < 5;
-        verticalLineRef.current.set("visible", isCenter);
-        tempCanvas?.renderAndReset();
-
-        changeObjectContextMenuPos(e.target, tempCanvas);
-        throttledCheckAlignment(e);
-      });
-
-      tempCanvas.on("object:added", () => {
-        updatePreview(tempCanvas);
-        openObjectContextMenu();
-      });
-
-      tempCanvas.on("object:modified", (e) => {
-        updatePreview(tempCanvas);
-        changeObjectContextMenuPos(e.target, tempCanvas);
-      });
-
-      tempCanvas.on("selection:cleared", () => {
-        removeAlignmentLines(tempCanvas);
-        updatePreview(tempCanvas);
-        tempCanvas.renderAll();
-      });
-
-      tempCanvas.on("mouse:up", () => {
-        if (!verticalLineRef.current) {
-          return;
-        }
-        updatePreview(tempCanvas);
-        verticalLineRef.current?.set("visible", false);
-      });
-
-      tempCanvas.on("after:render", (e) => {
-        changeObjectContextMenuPos(
-          tempCanvas.getActiveObject() as FabricObject,
-          tempCanvas
-        );
-      });
-
-      // tempCanvas.add(designArea);
-      // tempCanvas.centerObject(designArea);
-      setCanvas(tempCanvas);
-    })();
+    initCanvas();
 
     return () => {
       if (canvas) {
         canvas.dispose();
       }
     };
-  }, [size, activeIndex, updatePreview]);
+  }, [size]);
+
+  canvas?.getObjects().forEach((obj) => {
+    console.log(obj?.name1, obj.get("name1"));
+  });
 
   const attachVerticalLineRef = () => {
     if (!canvas) {
@@ -731,54 +756,45 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
     canvas.renderAll();
   };
 
-  const handlePreviewItemClick = async (i: number) => {
-    const json = canvas?.toJSON();
+  const saveCurrentState = (c: Canvas) => {
+    const objects = c?.getObjects();
+    setOutput((prev) => ({
+      ...prev,
+      [activeId]: { ...prev[activeId], objects },
+    }));
+  };
 
-    flushSync(() => {
-      setOutput((prev) => ({
-        ...prev,
-        [activeIndex.current]: {
-          ...prev[activeIndex.current],
-          json,
-        },
-      }));
-    });
-
-    activeIndex.current = i;
-    localStorage.setItem("activeIndex", i.toString());
-
-    canvas?.clear();
-
-    if (output[i].json) {
-      await canvas?.loadFromJSON(JSON.stringify(output[i].json));
-      canvas?.getObjects().map((obj) => {
-        if (obj.type === "textbox") {
-          attachEventHandlersToText(obj as Textbox);
-        } else if (obj.type === "image" && obj.get("name") !== "bg") {
-          attachEventHandlersToImage(obj as FabricImage);
-        }
-      });
-      canvas?.renderAll();
+  const loadNewShirt = (id: number) => {
+    if (!canvas) {
       return;
     }
 
-    const image = await FabricImage.fromURL(
-      output[i].image,
-      {},
-      {
-        selectable: false,
-        centeredScaling: true,
-      }
-    );
+    canvas.clear();
 
-    image.scaleToHeight(size.width);
-    image.scaleToWidth(size.height);
-    image.set("name1", "bg");
-    image.set("id", uuidv4());
+    const imageUrl = output[id].image;
 
-    canvas?.add(image);
-    canvas?.centerObject(image);
-    canvas?.renderAll();
+    if (output[id].objects.length === 0) {
+      createAnBgImage(canvas, imageUrl);
+    }
+
+    output[id].objects.forEach((obj) => canvas.add(obj));
+    createVerticalLine(canvas);
+
+    canvas.renderAll();
+  };
+
+  const handlePreviewItemClick = async (id: number) => {
+    if (!canvas) {
+      return;
+    }
+
+    localStorage.setItem("activeId", String(id));
+
+    if (id !== activeId) {
+      saveCurrentState(canvas);
+      setActiveId(id);
+      loadNewShirt(id);
+    }
   };
 
   return (
@@ -817,12 +833,12 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
           <MyCanvas {...size} />
           <div className="absolute top-0 right-3">
             <div className="flex flex-col gap-2">
-              {Object.values(output).map(({ image, svg }, i) => (
+              {Object.values(output).map(({ image, svg, id }, i) => (
                 <div
                   key={i}
                   className={twMerge(
                     "shadow-md cursor-pointer rounded-md p-3 hover:scale-105 transition-all duration-200",
-                    activeIndex.current === i && "border border-blue-300"
+                    activeId === id && "border border-blue-300"
                   )}
                   role="button"
                 >
@@ -830,11 +846,11 @@ const TShirtEditor = ({ imageUrls }: TshirtEditorPorps) => {
                     <div
                       className="w-20 h-20 [&>svg]:w-20 [&>svg]:h-20"
                       dangerouslySetInnerHTML={{ __html: svg }}
-                      onClick={() => handlePreviewItemClick(i)}
+                      onClick={() => handlePreviewItemClick(id)}
                     />
                   ) : (
                     <NextImage
-                      onClick={() => handlePreviewItemClick(i)}
+                      onClick={() => handlePreviewItemClick(id)}
                       src={image}
                       alt="text"
                       width={80}

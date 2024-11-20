@@ -3,8 +3,14 @@ const TShirtEditor = dynamic(() => import("@/components/TShirtEditor"));
 
 const HomePage = () => {
   const urls = [
-    "/images/Oversized-Lavender-Back-removebg-preview.png",
-    "https://www.transparentpng.com/download/shirt/t0nf0S-t-shirt-transparent-background.png",
+    {
+      id: 0,
+      url: "/images/Oversized-Lavender-Back-removebg-preview.png",
+    },
+    {
+      id: 1,
+      url: "https://www.transparentpng.com/download/shirt/t0nf0S-t-shirt-transparent-background.png",
+    },
   ];
   return (
     <main className="h-screen w-screen">

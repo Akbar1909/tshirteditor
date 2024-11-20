@@ -1,8 +1,7 @@
-import { Canvas, StaticCanvas } from "fabric";
+import { Canvas } from "fabric";
 import { useCallback, useEffect, useState } from "react";
 
-const usePreviewCanvas = (setOutput: any, activeIndex: number) => {
-  const [previewSvg, setPreviewSvg] = useState("");
+const usePreviewCanvas = (setOutput: any, activeId: number) => {
   const [previewCanvas, setPreviewCanvas] = useState<Canvas | null>(null);
 
   useEffect(() => {
@@ -31,13 +30,13 @@ const usePreviewCanvas = (setOutput: any, activeIndex: number) => {
         return;
       }
 
-      const activeIndex = Number(localStorage.getItem("activeIndex"));
+      const id = Number(localStorage.getItem("activeId"));
 
       setOutput((prev) => {
         return {
           ...prev,
-          [activeIndex]: {
-            ...prev[activeIndex],
+          [id]: {
+            ...prev[id],
             svg: canvas.toSVG(),
           },
         };
@@ -48,7 +47,6 @@ const usePreviewCanvas = (setOutput: any, activeIndex: number) => {
 
   return {
     updatePreview,
-    previewSvg,
   };
 };
 
