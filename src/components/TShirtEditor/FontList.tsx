@@ -23,6 +23,66 @@ const FontList = () => {
         label: "QwitcherGrypen-Bold",
         url: "/fonts/Qwitcher_Grypen/QwitcherGrypen-Bold.ttf",
       },
+      {
+        label: "EduAUVICWANTArrows-VariableFont_wght",
+        url: "/fonts/Edu_AU_VIC_WA_NT_Arrows/EduAUVICWANTArrows-VariableFont_wght.ttf",
+      },
+      {
+        label: "Bokor-Regular",
+        url: "/fonts/Bokor/Bokor-Regular.ttf",
+      },
+      {
+        label: "Sevillana-Regular",
+        url: "/fonts/Sevillana/Sevillana-Regular.ttf",
+      },
+      {
+        label: "Bungee_Spice",
+        url: "/fonts/Bungee_Spice/BungeeSpice-Regular.ttf",
+      },
+      {
+        label: "Bebas_Neue",
+        url: "/fonts/Bebas_Neue/BebasNeue-Regular.ttf",
+      },
+      {
+        label: "Inconsolata",
+        url: "/fonts/Inconsolata/Inconsolata-VariableFont_wdth,wght.ttf",
+      },
+      {
+        label: "Lacquer",
+        url: "/fonts/Lacquer/Lacquer-Regular.ttf",
+      },
+      {
+        label: "Doto",
+        url: "/fonts/Doto/Doto-VariableFont_ROND,wght.ttf",
+      },
+      {
+        label: "Protest_Revolution",
+        url: "/fonts/Protest_Revolution/ProtestRevolution-Regular.ttf",
+      },
+      {
+        label: "Caveat",
+        url: "/fonts/Caveat/static/Caveat-Bold.ttf",
+      },
+      {
+        label: "Sarina",
+        url: "/fonts/Sarina/Sarina-Regular.ttf",
+      },
+      {
+        label: "Shadows_Into_Light",
+        url: "/fonts/Shadows_Into_Light/ShadowsIntoLight-Regular.ttf",
+      },
+      {
+        label: "Satisfy",
+        url: "/fonts/Satisfy/Satisfy-Regular.ttf",
+      },
+      {
+        label: "Merienda",
+        url: "/fonts/Merienda/static/Merienda-Bold.ttf",
+      },
+      {
+        label: "Orbitron",
+        url: "/fonts/Orbitron/static/Orbitron-Bold.ttf",
+      },
     ],
     []
   );
